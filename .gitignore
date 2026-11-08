@@ -1,0 +1,21 @@
+# Ignore Python source code (only release docs/assets tracked)
+*.py
+__pycache__/
+*.pyc
+*.pyo
+
+# Ignore executables and dynamic libraries
+*.exe
+*.dll
+
+# Ignore PyInstaller build output
+build/
+dist/
+*.spec
+
+# Ignore build scripts and platform configs
+*.bat
+*.ps1
+*.conf
+source.properties
+NOTICE.txt

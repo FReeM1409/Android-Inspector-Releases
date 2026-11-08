@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Кирилл Макаров (FReeM1409) — Python Developer & Security Engineer</title>
+  <meta name="description" content="Портфолио и резюме разработчика Кирилла Макарова (FReeM1409). Python, Backend, ADB Automation, Telegram Highload, GameDev, IoT Cybersecurity.">
+  
+  <!-- Favicon & Fonts -->
+  <link rel="icon" type="image/png" href="assets/icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Main Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Ambient Glow Background -->
+  <div class="ambient-glow glow-1"></div>
+  <div class="ambient-glow glow-2"></div>
+  <div class="cyber-grid"></div>
+
+  <!-- NAVIGATION HEADER -->
+  <header class="site-header">
+    <div class="header-inner container">
+      <a href="#hero" class="brand-logo">
+        <span class="logo-bracket">&lt;</span><span class="logo-text">FReeM1409</span><span class="logo-slash">/</span><span class="logo-bracket">&gt;</span>
+        <span class="status-indicator" title="Открыт для предложений"></span>
+      </a>
+
+      <nav class="nav-menu">
+        <a href="#experience" class="nav-link" data-i18n="nav.experience">Опыт работы</a>
+        <a href="#projects" class="nav-link" data-i18n="nav.projects">Проекты</a>
+        <a href="#stack" class="nav-link" data-i18n="nav.stack">Стек</a>
+        <a href="#education" class="nav-link" data-i18n="nav.education">Наука & ВАК</a>
+        <a href="#contacts" class="nav-link" data-i18n="nav.contacts">Контакты</a>
+      </nav>
+
+      <div class="header-actions">
+        <button id="lang-toggle" class="btn-lang" title="Сменить язык / Switch language">
+          <span class="lang-active">RU</span> / <span class="lang-alt">EN</span>
+        </button>
+        <button onclick="window.print()" class="btn-action btn-print-pdf" title="Распечатать или сохранить в PDF">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+          <span data-i18n="btn.pdf">PDF Резюме</span>
+        </button>
+        <a href="https://t.me/sudo_QA" target="_blank" rel="noopener" class="btn-action btn-tg-primary">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.75-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .38z"/></svg>
+          <span>Telegram</span>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- HERO SECTION -->
+  <section id="hero" class="hero-section">
+    <div class="container hero-grid">
+      <div class="hero-content">
+        <div class="badge-status">
+          <span class="status-pulse"></span>
+          <span data-i18n="hero.badge">Открыт к предложениям: Python / QA Automation / Backend</span>
+        </div>
+        
+        <h1 class="hero-title">
+          <span class="title-sub" data-i18n="hero.greeting">Привет, я</span>
+          <span class="gradient-text">Кирилл Макаров</span>
+        </h1>
+        
+        <div class="hero-subtitle">
+          <span class="terminal-prompt">$</span> 
+          <span class="role-typing" data-i18n="hero.role">Python & Backend Developer | System & ADB Automation | IoT Cybersecurity Researcher</span>
+        </div>
+
+        <p class="hero-description" data-i18n="hero.desc">
+          Разработчик высоконагруженных Telegram-систем, кроссплатформенных настольных и мобильных инструментов диагностики, систем автоматизации и защищенных сетевых инфраструктур. Практический опыт полного цикла: от архитектуры реляционных БД и Linux-серверов до клиентских GUI и аппаратной верификации устройств.
+        </p>
+
+        <div class="hero-meta">
+          <div class="meta-item">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            <span data-i18n="hero.location">Москва, Россия (Удаленно / Гибрид / Офис)</span>
+          </div>
+          <div class="meta-item">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/></svg>
+            <span data-i18n="hero.exp">3+ года коммерческого опыта</span>
+          </div>
+        </div>
+
+        <div class="hero-cta-buttons">
+          <a href="https://t.me/sudo_QA" target="_blank" rel="noopener" class="btn-primary-glow">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.75-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .38z"/></svg>
+            <span data-i18n="cta.tg">Написать в Telegram (@sudo_QA)</span>
+          </a>
+          <a href="https://github.com/FReeM1409" target="_blank" rel="noopener" class="btn-secondary">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+            <span>GitHub Profile</span>
+          </a>
+          <a href="https://github.com/FReeM1409/Android-Inspector-Releases/releases/latest" target="_blank" rel="noopener" class="btn-secondary btn-inspector">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+            <span data-i18n="cta.inspector">Скачать Inspector (.EXE)</span>
+          </a>
+        </div>
+      </div>
+
+      <!-- Hero Cyber Terminal -->
+      <div class="hero-terminal">
+        <div class="terminal-bar">
+          <div class="terminal-dots">
+            <span class="dot red"></span>
+            <span class="dot yellow"></span>
+            <span class="dot green"></span>
+          </div>
+          <span class="terminal-title">freem1409@dev-core:~</span>
+        </div>
+        <div class="terminal-body font-mono">
+          <div class="code-line"><span class="c-green">➜</span> <span class="c-blue">cat</span> developer_profile.json</div>
+          <pre class="terminal-code"><code>{
+  <span class="c-purple">"name"</span>: <span class="c-amber">"Kirill Makarov"</span>,
+  <span class="c-purple">"handle"</span>: <span class="c-amber">"FReeM1409"</span>,
+  <span class="c-purple">"primary_stack"</span>: [
+    <span class="c-green">"Python (Asyncio, Aiogram, Telethon)"</span>,
+    <span class="c-green">"Desktop CyberGUI (Tkinter, PyInstaller)"</span>,
+    <span class="c-green">"System Automation (ADB, IPC Parcel)"</span>,
+    <span class="c-green">"High-Volume SQL (SQLite 4.5M+, Postgres)"</span>
+  ],
+  <span class="c-purple">"specialization"</span>: <span class="c-cyan">"2.3.6 Infosec & IoT Security"</span>,
+  <span class="c-purple">"commercial_orders"</span>: <span class="c-green">"1000+ completed"</span>,
+  <span class="c-purple">"total_turnover"</span>: <span class="c-green">"1 000 000+ RUB"</span>,
+  <span class="c-purple">"telegram"</span>: <span class="c-amber">"@sudo_QA"</span>
+}</code></pre>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- KEY METRICS BANNER -->
+  <section class="metrics-section">
+    <div class="container metrics-grid">
+      <div class="metric-card">
+        <div class="metric-num font-mono gradient-text">1 000+</div>
+        <div class="metric-label" data-i18n="metric.orders">Выполненных заказов</div>
+        <div class="metric-sub" data-i18n="metric.orders_sub">В собственных e-commerce Telegram сервисах</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-num font-mono gradient-text">1 000 000+ ₽</div>
+        <div class="metric-label" data-i18n="metric.turnover">Коммерческий оборот</div>
+        <div class="metric-sub" data-i18n="metric.turnover_sub">Автоматизированные платформы цифровой дистрибуции</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-num font-mono gradient-text">4.46M+</div>
+        <div class="metric-label" data-i18n="metric.db">Артикулов в индексах БД</div>
+        <div class="metric-sub" data-i18n="metric.db_sub">Дилерские автокаталоги VAG, BMW, Mercedes, Mitsubishi</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-num font-mono gradient-text">ВАК 2.3.6</div>
+        <div class="metric-label" data-i18n="metric.vak">Научные публикации</div>
+        <div class="metric-sub" data-i18n="metric.vak_sub">Методы защиты информации и адаптивная криптография IoT</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- WORK EXPERIENCE TIMELINE -->
+  <section id="experience" class="section">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-tag font-mono">// CAREER ROADMAP</span>
+        <h2 class="section-title" data-i18n="exp.title">Опыт работы</h2>
+        <p class="section-desc" data-i18n="exp.desc">Коммерческая разработка, обеспечение качества сложных распределенных систем и системная автоматизация.</p>
+      </div>
+
+      <div class="timeline">
+        <!-- Job 1 -->
+        <div class="timeline-item">
+          <div class="timeline-marker"></div>
+          <div class="timeline-card">
+            <div class="timeline-header">
+              <div>
+                <h3 class="job-title" data-i18n="exp.job1_title">Python-разработчик / QA Automation Engineer</h3>
+                <div class="job-company font-mono" data-i18n="exp.job1_company">Проектная деятельность и Фриланс</div>
+              </div>
+              <div class="job-period font-mono" data-i18n="exp.job1_period">Октябрь 2024 — н. в. (2 года 2 месяца)</div>
+            </div>
+            <ul class="job-duties">
+              <li data-i18n="exp.job1_d1">Разработка автономных десктопных комбайнов для глубокой аппаратной телеметрии и реверс-инспекции мобильных ОС (Tkinter, ADB Protocol, PyInstaller).</li>
+              <li data-i18n="exp.job1_d2">Создание и поддержка высоконагруженных Telegram-ботов с миллионными базами данных артикулов (Aiogram 3.x, Telethon, Asyncio, aiosqlite).</li>
+              <li data-i18n="exp.job1_d3">Проектирование и развертывание защищенных VPN-инфраструктур (VLESS-XTLS-Reality, AmneziaWG, 3X-UI) на выделенных серверах в Европе.</li>
+              <li data-i18n="exp.job1_d4">Сквозная автоматизация E-Commerce процессов (TON SDK WalletV5R1, Playwright, UIAutomator2 Device Bridge) с обработкой более 1 000 заказов.</li>
+            </ul>
+            <div class="tech-tags">
+              <span>Python 3.13</span><span>Asyncio</span><span>Aiogram 3</span><span>Tkinter</span><span>ADB Protocol</span><span>Playwright</span><span>AmneziaWG</span><span>SQLite</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Job 2 -->
+        <div class="timeline-item">
+          <div class="timeline-marker"></div>
+          <div class="timeline-card">
+            <div class="timeline-header">
+              <div>
+                <h3 class="job-title" data-i18n="exp.job2_title">Инженер по тестированию ПО (QA Engineer)</h3>
+                <div class="job-company font-mono">Яндекс</div>
+              </div>
+              <div class="job-period font-mono" data-i18n="exp.job2_period">Апрель 2024 — Сентябрь 2024 (6 месяцев)</div>
+            </div>
+            <ul class="job-duties">
+              <li data-i18n="exp.job2_d1">Тестирование комплексных веб-интерфейсов и распределенных микросервисов в высоконагруженной продакшн-среде.</li>
+              <li data-i18n="exp.job2_d2">Глубокое тестирование REST API микросервисов с использованием Postman, cURL, Charles Proxy и Swagger/OpenAPI.</li>
+              <li data-i18n="exp.job2_d3">Анализ и локализация клиент-серверных дефектов в Chrome DevTools, системных логах Linux и серверах очередей.</li>
+              <li data-i18n="exp.job2_d4">Ведение тестовой документации, составление матриц покрытия, тест-кейсов и баг-репортов в Test IT и Allure.</li>
+            </ul>
+            <div class="tech-tags">
+              <span>REST API</span><span>Postman</span><span>Linux</span><span>DevTools</span><span>Test IT</span><span>Allure</span><span>cURL</span><span>Microservices</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Job 3 -->
+        <div class="timeline-item">
+          <div class="timeline-marker"></div>
+          <div class="timeline-card">
+            <div class="timeline-header">
+              <div>
+                <h3 class="job-title" data-i18n="exp.job3_title">Младший QA-инженер</h3>
+                <div class="job-company font-mono">ГК «Монолит»</div>
+              </div>
+              <div class="job-period font-mono" data-i18n="exp.job3_period">Июль 2022 — Март 2024 (1 год 9 месяцев)</div>
+            </div>
+            <ul class="job-duties">
+              <li data-i18n="exp.job3_d1">Функциональное, регрессионное и дымовое тестирование веб-сервисов и сложных калькуляторов расчета стоимости стройматериалов.</li>
+              <li data-i18n="exp.job3_d2">E2E тестирование интеграционных потоков обмена данными между веб-порталом и CRM/ERP системами.</li>
+              <li data-i18n="exp.job3_d3">Валидация целостности данных в реляционных базах данных, составление сложных выборок и проверок через SQL-запросы.</li>
+            </ul>
+            <div class="tech-tags">
+              <span>SQL</span><span>Web QA</span><span>E2E Testing</span><span>CRM Integration</span><span>Regression</span><span>Bug Tracking</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PROJECTS SHOWCASE -->
+  <section id="projects" class="section">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-tag font-mono">// CODE & ARCHITECTURE</span>
+        <h2 class="section-title" data-i18n="proj.title">Ключевые проекты</h2>
+        <p class="section-desc" data-i18n="proj.desc">Реальные инженерные решения: от системных низкоуровневых десктоп-утилит до Highload Telegram ботов и GameDev.</p>
+      </div>
+
+      <!-- Filter Buttons -->
+      <div class="project-filters">
+        <button class="filter-btn active" data-filter="all" data-i18n="filter.all">Все проекты</button>
+        <button class="filter-btn" data-filter="desktop" data-i18n="filter.desktop">Desktop & ADB</button>
+        <button class="filter-btn" data-filter="telegram" data-i18n="filter.tg">Telegram & Backend</button>
+        <button class="filter-btn" data-filter="security" data-i18n="filter.sec">Network & Security</button>
+        <button class="filter-btn" data-filter="gamedev" data-i18n="filter.game">Gamedev</button>
+      </div>
+
+      <div class="projects-grid">
+        
+        <!-- PROJECT 1: FLAGSHIP INSPECTOR -->
+        <div class="project-card featured-project" data-category="desktop security">
+          <div class="featured-badge" data-i18n="proj.featured">★ Флагманский проект v4.3.0</div>
+          <div class="project-header">
+            <div>
+              <h3 class="project-title">Android Ultimate Inspector & Dual App Manager v4.3.0</h3>
+              <p class="project-sub font-mono">Флагманский десктоп-комбайн диагностики Android и скрытого клонирования</p>
+            </div>
+            <a href="https://github.com/FReeM1409/Android-Inspector-Releases" target="_blank" rel="noopener" class="project-link-icon" title="Открыть репозиторий">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+            </a>
+          </div>
+          
+          <p class="project-desc">
+            Флагманский десктоп-комбайн диагностики Android и скрытого клонирования (Python, Tkinter Canvas, ADB, PyInstaller, GitHub Releases API). 
+            Монолитное Windows-приложение со встроенным ADB и самозаменяющимся облачным автоапдейтером. Включает покомпонентный Anti-Fake детектор по 9 узлам (CPU/GPU, Knox 0x0, матрица 120 Гц, камеры OIS, 3D Sonic сканер, барометр IP68), 
+            интерактивную 2D рентген-схему платы, расчет истинного здоровья АКБ (Samsung Fuel Gauge ASOC / деградация Li-Ion), скрытый менеджер профилей клонирования (95/999) и экспорт официальных PDF/HTML-сертификатов с подписью SHA-256.
+          </p>
+
+          <!-- Gallery Preview with Lightbox triggers -->
+          <div class="project-gallery-grid">
+            <div class="gallery-item" onclick="openLightbox('assets/inspector/03_xray_schematic.png', 'Интерактивная 2D рентген-схема платы с подсветкой чипов')">
+              <img src="assets/inspector/03_xray_schematic.png" alt="Рентген-схема" loading="lazy">
+              <span class="gallery-caption">🔬 Рентген-схема платы</span>
+            </div>
+            <div class="gallery-item" onclick="openLightbox('assets/inspector/02_originality_check.png', 'Покомпонентный чек-лист оригинальности узлов устройства')">
+              <img src="assets/inspector/02_originality_check.png" alt="Оригинальность узлов" loading="lazy">
+              <span class="gallery-caption">🛡 Чек-лист узлов</span>
+            </div>
+            <div class="gallery-item" onclick="openLightbox('assets/inspector/01_dossier_telemetry.png', 'Сводное паспортное досье смартфона и обход Knox')">
+              <img src="assets/inspector/01_dossier_telemetry.png" alt="Сводное досье" loading="lazy">
+              <span class="gallery-caption">📋 Паспортное досье</span>
+            </div>
+            <div class="gallery-item" onclick="openLightbox('assets/inspector/04_system_specs.png', 'Спецификации железа и статус загрузчика')">
+              <img src="assets/inspector/04_system_specs.png" alt="Спецификации железа" loading="lazy">
+              <span class="gallery-caption">⚙ Спецификации ОС</span>
+            </div>
+          </div>
+
+          <div class="project-footer">
+            <div class="tech-tags">
+              <span>Python</span><span>Tkinter Canvas</span><span>ADB</span><span>PyInstaller</span><span>GitHub Releases API</span>
+            </div>
+            <div class="project-actions">
+              <a href="https://github.com/FReeM1409/Android-Inspector-Releases/releases/latest" target="_blank" rel="noopener" class="btn-sm btn-primary">
+                Скачать .EXE релиз ➔
+              </a>
+              <a href="https://github.com/FReeM1409/Android-Inspector-Releases" target="_blank" rel="noopener" class="btn-sm btn-outline">
+                Репозиторий
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <!-- PROJECT 2: KRUSTY RESTAURANT TYCOON -->
+        <div class="project-card" data-category="gamedev">
+          <div class="project-header">
+            <div>
+              <h3 class="project-title">Krusty Restaurant Tycoon (Godot Engine & Python/Pygame)</h3>
+              <p class="project-sub font-mono">Кроссплатформенный симулятор ресторана с онлайн-кооперативом на 2–4 игроков</p>
+            </div>
+          </div>
+          <p class="project-desc">
+            Кроссплатформенный симулятор ресторана: изначально разработан на Python/Pygame с облачным мостом сохранений и In-App APK апдейтером, затем перенесен на <strong>Godot Engine</strong> с поддержкой сетевого онлайн-кооператива на <strong>2–4 игроков</strong>, выбором любого открытого дня для перепрохождения на 3 звезды, ежедневными контрактами и кастомным мультяшным UI.
+          </p>
+          <div class="tech-tags">
+            <span>Godot Engine</span><span>GDScript</span><span>Python</span><span>Pygame</span><span>Online Coop (2-4)</span><span>GLSL Shaders</span><span>NetworkBridge</span>
+          </div>
+        </div>
+
+        <!-- PROJECT 3: МОБИЛЬНАЯ ИГРА «НОЧНОЙ ПЕРЕПЛЁТ» -->
+        <div class="project-card" data-category="gamedev">
+          <div class="project-header">
+            <div>
+              <h3 class="project-title">Мобильная игра «Ночной Переплёт» (Python, Pygame, Kivy)</h3>
+              <p class="project-sub font-mono">Самостоятельная игра под Android на чистом Python со сборкой подписанных APK</p>
+            </div>
+          </div>
+          <p class="project-desc">
+            Самостоятельная игра под Android на чистом Python со сборкой подписанных APK. Включает адаптивное сенсорное управление, систему динамического освещения и визуальных эффектов, локальное и облачное кэширование игрового прогресса, а также автоматизированную сборку через Buildozer и Android NDK.
+          </p>
+          <div class="tech-tags">
+            <span>Python</span><span>Pygame</span><span>Kivy</span><span>Buildozer</span><span>Android NDK</span><span>Signed APK</span>
+          </div>
+        </div>
+
+        <!-- PROJECT 4: DAOS.V -->
+        <div class="project-card" data-category="telegram">
+          <div class="project-header">
+            <div>
+              <h3 class="project-title">Daos.V — Агрегатор дилерских автокаталогов и VIN-декодер</h3>
+              <p class="project-sub font-mono">БД SQLite на 4,46+ млн артикулов: VAG ETKA, BMW ETK, Mercedes EPC, Mitsubishi ASA</p>
+            </div>
+          </div>
+          <p class="project-desc">
+            Telegram-платформа на базе БД SQLite на 4,46+ млн артикулов: VAG ETKA, BMW ETK, Mercedes EPC, Mitsubishi ASA + параллельный парсинг Exist, Elcats, Autodoc, ZZap. Мгновенная расшифровка VIN-номеров, подбор узлов по оригинальным каталожным взрыв-схемам и параллельный сбор оптовых цен.
+          </p>
+          <div class="tech-tags">
+            <span>Python</span><span>Aiogram 3</span><span>SQLite (4.46M+ rows)</span><span>Asyncio</span><span>Aiohttp</span><span>Web Scraping</span>
+          </div>
+        </div>
+
+        <!-- PROJECT 5: BSD STORE & UC SHIELD -->
+        <div class="project-card" data-category="telegram security">
+          <div class="project-header">
+            <div>
+              <h3 class="project-title">BSD Store & UC SHIELD</h3>
+              <p class="project-sub font-mono">Коммерческая e-commerce экосистема автовыдачи цифровых товаров и VPN-инфраструктура</p>
+            </div>
+          </div>
+          <p class="project-desc">
+            Коммерческая e-commerce экосистема автовыдачи цифровых товаров (TON SDK WalletV5R1 + Fragment API, Playwright, UIAutomator2 Device Bridge) и VPN-инфраструктура (3X-UI API, VLESS / AmneziaWG) с оборотом &gt; 1 000 000 ₽. Полная сквозная автоматизация процессинга платежей и безопасной доставки цифровых ключей.
+          </p>
+          <div class="tech-tags">
+            <span>Python</span><span>TON SDK WalletV5R1</span><span>Fragment API</span><span>Playwright</span><span>UIAutomator2</span><span>3X-UI API</span><span>VLESS</span><span>AmneziaWG</span>
+          </div>
+        </div>
+
+        <!-- PROJECT 6: DUOLINGO SILENT BOT -->
+        <div class="project-card" data-category="desktop">
+          <div class="project-header">
+            <div>
+              <h3 class="project-title">DuolingoSilentBot (CV / OCR Automation)</h3>
+              <p class="project-sub font-mono">Десктопный бот на базе компьютерного зрения без перехвата курсора мыши</p>
+            </div>
+          </div>
+          <p class="project-desc">
+            Десктопный бот на базе компьютерного зрения (OpenCV, Tesseract OCR, MSS, Win32 API <code>AttachThreadInput</code>), автоматически решающий математические уровни Duolingo в фоновом режиме без перехвата курсора мыши у пользователя. Реализует неблокирующую отправку аппаратных сообщений ввода.
+          </p>
+          <div class="tech-tags">
+            <span>Python</span><span>OpenCV</span><span>Tesseract OCR</span><span>MSS</span><span>Win32 API AttachThreadInput</span><span>Background Automation</span>
+          </div>
+        </div>
+
+        <!-- PROJECT 7: PSHOME RESPONDER -->
+        <div class="project-card" data-category="telegram">
+          <div class="project-header">
+            <div>
+              <h3 class="project-title">PSHOME Responder & Content Grabber (Telethon)</h3>
+              <p class="project-sub font-mono">Интеллектуальный юзербот-автоответчик для крупных чатов</p>
+            </div>
+          </div>
+          <p class="project-desc">
+            Интеллектуальный юзербот-автоответчик для крупных чатов с контекстным распознаванием вопросов по FAQ, фильтрацией рекламы и автоудалением по таймерам. Построен на библиотеке Telethon и MTProto, обеспечивает высокую скорость реакции и надежную фильтрацию спама.
+          </p>
+          <div class="tech-tags">
+            <span>Telethon</span><span>MTProto</span><span>Python</span><span>Asyncio</span><span>FAQ NLP Recognition</span><span>Timer Auto-delete</span>
+          </div>
+        </div>
+
+        <!-- PROJECT 8: EAAC & IOT RESEARCH -->
+        <div class="project-card" data-category="security">
+          <div class="project-header">
+            <div>
+              <h3 class="project-title">Научный комплекс защиты сетей IoT (EAAC + Smart Edge Gateway)</h3>
+              <p class="project-sub font-mono">Энергозависимая адаптивная криптография и фильтр eBPF/XDP (ВАК 2.3.6)</p>
+            </div>
+          </div>
+          <p class="project-desc">
+            Метод адаптивной криптографии (EAAC: ChaCha8, PRESENT-80, Ascon-128) и 3-каскадный граничный шлюз (фильтр <code>eBPF/XDP</code> на ядре Linux + поведенческие профили <code>MUD</code> RFC 8520). Увеличил время жизни узлов от АКБ в 17,8–37,4 раза и снизил потери пакетов при DDoS с 98.4% до 3.4%.
+          </p>
+          <div class="tech-tags">
+            <span>eBPF / XDP</span><span>Linux Kernel</span><span>C / Python</span><span>MQTT / TLS 1.3</span><span>ESP32 / FreeRTOS</span><span>RFC 8520</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- TECH STACK SECTION -->
+  <section id="stack" class="section">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-tag font-mono">// SKILLS & TOOLSET</span>
+        <h2 class="section-title" data-i18n="stack.title">Технологический стек</h2>
+        <p class="section-desc" data-i18n="stack.desc">Сбалансированный арсенал языков, библиотек, системных утилит и протоколов безопасности.</p>
+      </div>
+
+      <div class="stack-categories-grid">
+        <div class="stack-category-card">
+          <div class="stack-cat-header">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#00e676" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+            <h3 data-i18n="stack.cat1">Backend & Python</h3>
+          </div>
+          <div class="stack-items">
+            <span class="skill-pill">Python 3.10–3.13</span>
+            <span class="skill-pill">Asyncio / Concurrent</span>
+            <span class="skill-pill">Aiogram 3.x</span>
+            <span class="skill-pill">Telethon (MTProto)</span>
+            <span class="skill-pill">REST API / Webhooks</span>
+            <span class="skill-pill">SQLite (Multi-Million Rows)</span>
+            <span class="skill-pill">PostgreSQL / aiosqlite</span>
+            <span class="skill-pill">Playwright Web Scraping</span>
+          </div>
+        </div>
+
+        <div class="stack-category-card">
+          <div class="stack-cat-header">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#80d8ff" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+            <h3 data-i18n="stack.cat2">Desktop, Mobile & Automation</h3>
+          </div>
+          <div class="stack-items">
+            <span class="skill-pill">Tkinter (Custom CyberCanvas)</span>
+            <span class="skill-pill">PyInstaller (Monolithic EXE)</span>
+            <span class="skill-pill">ADB Protocol & IPC Parcel</span>
+            <span class="skill-pill">Godot 4 (GDScript, Coop)</span>
+            <span class="skill-pill">Pygame & Kivy</span>
+            <span class="skill-pill">OpenCV & Tesseract OCR</span>
+            <span class="skill-pill">Win32 API & MSS</span>
+            <span class="skill-pill">UIAutomator2 Bridge</span>
+          </div>
+        </div>
+
+        <div class="stack-category-card">
+          <div class="stack-cat-header">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ffd700" stroke-width="2"><path d="M4 17l6-6-6-6m8 14h8"/></svg>
+            <h3 data-i18n="stack.cat3">Linux, DevOps & Infrastructure</h3>
+          </div>
+          <div class="stack-items">
+            <span class="skill-pill">Ubuntu / Debian Linux</span>
+            <span class="skill-pill">Systemd Service Management</span>
+            <span class="skill-pill">Docker & Compose</span>
+            <span class="skill-pill">Nginx Web Server</span>
+            <span class="skill-pill">VLESS-XTLS-Reality</span>
+            <span class="skill-pill">AmneziaWG / WireGuard</span>
+            <span class="skill-pill">Bash & PowerShell Scripting</span>
+            <span class="skill-pill">Git & GitHub CLI</span>
+          </div>
+        </div>
+
+        <div class="stack-category-card">
+          <div class="stack-cat-header">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#e040fb" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            <h3 data-i18n="stack.cat4">Cybersecurity & QA Engineering</h3>
+          </div>
+          <div class="stack-items">
+            <span class="skill-pill">Android Security (Knox, SELinux)</span>
+            <span class="skill-pill">MitM Traffic Detection & CA</span>
+            <span class="skill-pill">Postman / cURL API Testing</span>
+            <span class="skill-pill">eBPF / XDP Kernel Filters</span>
+            <span class="skill-pill">MUD RFC 8520 Behavior Profiles</span>
+            <span class="skill-pill">Adaptive Cryptography (Ascon, ChaCha)</span>
+            <span class="skill-pill">Test IT & Allure Docs</span>
+            <span class="skill-pill">Chrome DevTools Debugging</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- EDUCATION & RESEARCH SECTION -->
+  <section id="education" class="section">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-tag font-mono">// ACADEMIC & RESEARCH</span>
+        <h2 class="section-title" data-i18n="edu.title">Образование и Научная деятельность</h2>
+        <p class="section-desc" data-i18n="edu.desc">Инженерная база, диссертационное исследование и публикации в рецензируемых журналах ВАК.</p>
+      </div>
+
+      <div class="edu-grid">
+        <div class="edu-card">
+          <div class="edu-badge font-mono">ДИССЕРТАЦИОННОЕ ИССЛЕДОВАНИЕ</div>
+          <h3 class="edu-title">Специальность 2.3.6 — Методы и системы защиты информации, информационная безопасность</h3>
+          <p class="edu-meta font-mono">Группа ДАИИУС-301 • Информационно-измерительные и управляющие системы</p>
+          <p class="edu-desc">
+            Тема исследования: <strong>«Специфика методов обеспечения информационной безопасности в сетях Интернета вещей»</strong>. 
+            Исследование включает математическое и программное моделирование методов адаптивной криптографии (EAAC), устойчивости протоколов связи к аномальным нагрузкам 
+            и построение трехкаскадных интеллектуальных граничных шлюзов на базе eBPF/XDP.
+          </p>
+        </div>
+
+        <div class="edu-card">
+          <div class="edu-badge font-mono badge-green">ПУБЛИКАЦИИ И СТАТЬИ ВАК</div>
+          <h3 class="edu-title">Экспериментальные исследования протоколов безопасности в гетерогенных сетях IoT</h3>
+          <p class="edu-meta font-mono">Рецензируемые издания списка ВАК РФ</p>
+          <ul class="edu-list">
+            <li>Исследование энергоэффективности и отказоустойчивости стандартных криптопротоколов (TLS 1.3, DTLS, MQTT-SN) на энергодефицитных микроконтроллерах.</li>
+            <li>Синтез гибридного алгоритма энергозависимой криптографии (ChaCha8, PRESENT-80, Ascon-128) с динамическим переключением шифров по уровню заряда АКБ.</li>
+            <li>Аппаратная верификация и отражение распределенных сетевых атак через профили MUD (Manufacturer Usage Description) и фильтры ядра XDP.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CONTACTS & FOOTER -->
+  <footer id="contacts" class="site-footer">
+    <div class="container footer-inner">
+      <div class="footer-cta-box">
+        <span class="section-tag font-mono">// GET IN TOUCH</span>
+        <h2 class="footer-title" data-i18n="contact.title">Готовы обсудить проект или позицию?</h2>
+        <p class="footer-desc" data-i18n="contact.desc">Открыт к предложениям по разработке бэкенда, инструментов автоматизации, реверс-инспекции или позициям QA Automation / Python Developer.</p>
+
+        <div class="contact-cards-grid">
+          <!-- Telegram Card -->
+          <div class="contact-card">
+            <div class="contact-icon tg-icon">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.75-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .38z"/></svg>
+            </div>
+            <div class="contact-info">
+              <div class="contact-label font-mono">TELEGRAM ДЛЯ СВЯЗИ</div>
+              <div class="contact-val font-mono">@sudo_QA</div>
+            </div>
+            <div class="contact-actions">
+              <a href="https://t.me/sudo_QA" target="_blank" rel="noopener" class="btn-sm btn-primary">
+                Открыть диалог
+              </a>
+              <button onclick="copyToClipboard('@sudo_QA', this)" class="btn-sm btn-outline">
+                Скопировать
+              </button>
+            </div>
+          </div>
+
+          <!-- GitHub Card -->
+          <div class="contact-card">
+            <div class="contact-icon gh-icon">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+            </div>
+            <div class="contact-info">
+              <div class="contact-label font-mono">GITHUB РЕПОЗИТОРИИ</div>
+              <div class="contact-val font-mono">github.com/FReeM1409</div>
+            </div>
+            <div class="contact-actions">
+              <a href="https://github.com/FReeM1409" target="_blank" rel="noopener" class="btn-sm btn-outline">
+                Перейти в профиль
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <div class="footer-copy font-mono">
+          © 2026 Кирилл Макаров (FReeM1409) • Designed & Built with Vanilla Web & Cyber Aesthetics
+        </div>
+        <div class="footer-links">
+          <a href="#hero">Наверх ↑</a>
+          <a href="https://github.com/FReeM1409/Android-Inspector-Releases" target="_blank">Android Inspector</a>
+          <a href="https://t.me/sudo_QA" target="_blank">Telegram</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- LIGHTBOX MODAL -->
+  <div id="lightbox" class="lightbox-modal" onclick="closeLightbox()">
+    <div class="lightbox-content" onclick="event.stopPropagation()">
+      <button class="lightbox-close" onclick="closeLightbox()">&times;</button>
+      <img id="lightbox-img" src="" alt="Screenshot Preview">
+      <div id="lightbox-caption" class="lightbox-caption font-mono"></div>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION -->
+  <div id="toast" class="toast-popup font-mono"></div>
+
+  <!-- Main JavaScript -->
+  <script src="script.js"></script>
+</body>
+</html>
