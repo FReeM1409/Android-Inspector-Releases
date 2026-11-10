@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Universal Mobile Inspector (Android & iOS) v6.2.1
+Universal Mobile Inspector (Android & iOS) v6.2.2
 Advanced Cyberpunk Hardware Telemetry, Deep Battery Diagnostic, Component Originality Verification,
 CyberGauge Canvas Radial Widgets, Network & IoT Security Audit, Dangerous Permissions Risk Scanner,
 Dual App Manager & Self-Updating System (Samsung / Xiaomi / POCO / OPPO / Vivo / Pixel / Apple iPhone).
@@ -536,7 +536,7 @@ CREATE_NO_WINDOW = 0x08000000 if os.name == 'nt' else 0
 # =====================================================================
 # КОНФИГУРАЦИЯ И АВТООБНОВЛЕНИЕ
 # =====================================================================
-APP_VERSION = "6.2.1"
+APP_VERSION = "6.2.2"
 APP_NAME = "Universal Mobile Inspector (Android & iOS)"
 GITHUB_OWNER = "FReeM1409"
 GITHUB_REPO = "Android-Inspector-Releases"
@@ -841,6 +841,9 @@ NOMINAL_BATTERY_MAP = {
 # =====================================================================
 # APPLE iOS INSPECTOR BRIDGE (pymobiledevice3 интеграция для iPhone / iPad)
 # =====================================================================
+import asyncio
+import inspect
+
 try:
     from pymobiledevice3.usbmux import list_devices as usbmux_list_devices
     from pymobiledevice3.lockdown import create_using_usbmux
@@ -849,6 +852,93 @@ try:
     HAS_IOS_SUPPORT = True
 except Exception:
     HAS_IOS_SUPPORT = False
+
+def ios_sync(obj):
+    """Если объект является корутиной (pymobiledevice3 v4+), выполняет её синхронно."""
+    if inspect.iscoroutine(obj):
+        try:
+            loop = asyncio.new_event_loop()
+            try:
+                return loop.run_until_complete(obj)
+            finally:
+                loop.close()
+        except Exception:
+            return None
+    return obj
+
+def ios_call(fn, *args, **kwargs):
+    """Безопасный синхронно-асинхронный вызов функции/метода pymobiledevice3."""
+    try:
+        res = fn(*args, **kwargs)
+        return ios_sync(res)
+    except Exception:
+        return None
+
+def ios_get_all_values(lockdown) -> dict:
+    """Надежно возвращает словарь всех значений lockdown для любой версии pymobiledevice3."""
+    if not lockdown:
+        return {}
+    try:
+        val = getattr(lockdown, "all_values", None)
+        if val:
+            res = ios_sync(val() if callable(val) else val)
+            if isinstance(res, dict) and res:
+                return res
+    except Exception:
+        pass
+    try:
+        res = ios_sync(lockdown.get_value())
+        if isinstance(res, dict) and res:
+            return res
+    except Exception:
+        pass
+    return {}
+
+def ios_get_val(lockdown, name=None, domain=None):
+    """Безопасное чтение конкретного ключа или домена из lockdown (sync + async)."""
+    if not lockdown:
+        return None
+    try:
+        if domain and name:
+            return ios_sync(lockdown.get_value(domain=domain, key=name))
+        elif domain:
+            return ios_sync(lockdown.get_value(domain=domain))
+        elif name:
+            return ios_sync(lockdown.get_value(key=name))
+        return ios_sync(lockdown.get_value())
+    except TypeError:
+        try:
+            if domain:
+                return ios_sync(lockdown.get_value(domain))
+            return ios_sync(lockdown.get_value(None, name))
+        except Exception:
+            return None
+    except Exception:
+        return None
+
+def ios_get_ioregistry(diag, plane_or_name: str):
+    """Совместимое чтение ветки IORegistry для старых и новых версий DiagnosticsService."""
+    if not diag:
+        return None
+    try:
+        if hasattr(diag, "ioregistry"):
+            res = ios_sync(diag.ioregistry(plane=plane_or_name))
+            if res: return res
+    except Exception:
+        pass
+    try:
+        if hasattr(diag, "ioregistry"):
+            res = ios_sync(diag.ioregistry(name=plane_or_name))
+            if res: return res
+    except Exception:
+        pass
+    try:
+        if hasattr(diag, "get_ioregistry_entry"):
+            res = ios_sync(diag.get_ioregistry_entry(plane_or_name))
+            if res: return res
+    except Exception:
+        pass
+    return None
 
 # =====================================================================
 # ДВИЖОК ДИАГНОСТИКИ И ТЕЛЕМЕТРИИ ТЕХНИКИ APPLE (IPHONE / IPAD)
@@ -898,6 +988,10 @@ APPLE_PRODUCT_MAP = {
     "iPhone17,3": ("iPhone 16", "Apple A18 (3 nm)", "arm64e", "2024"),
     "iPhone17,4": ("iPhone 16 Plus", "Apple A18 (3 nm)", "arm64e", "2024"),
     "iPhone17,5": ("iPhone 16e", "Apple A18", "arm64e", "2025"),
+    "iPhone18,1": ("iPhone 17 Pro", "Apple A19 Pro (2 nm)", "arm64e", "2025"),
+    "iPhone18,2": ("iPhone 17 Pro Max", "Apple A19 Pro (2 nm)", "arm64e", "2025"),
+    "iPhone18,3": ("iPhone 17", "Apple A19 (2 nm)", "arm64e", "2025"),
+    "iPhone18,4": ("iPhone 17 Air / Plus", "Apple A19 (2 nm)", "arm64e", "2025"),
     # iPad Pro M1 / M2 / M4 & Air & mini
     "iPad13,4": ("iPad Pro 11\" (3-е пок.)", "Apple M1", "arm64e", "2021"),
     "iPad13,5": ("iPad Pro 11\" (3-е пок. Cellular)", "Apple M1", "arm64e", "2021"),
@@ -939,6 +1033,8 @@ APPLE_NOMINAL_BATTERY = {
     "iPhone 15 Plus": 4383, "iPhone 15 Pro": 3274, "iPhone 15 Pro Max": 4422,
     "iPhone 16": 3561, "iPhone 16 Plus": 4674, "iPhone 16 Pro": 3582,
     "iPhone 16 Pro Max": 4685, "iPhone 16e": 3800,
+    "iPhone 17": 3650, "iPhone 17 Air / Plus": 4100, "iPhone 17 Pro": 3800,
+    "iPhone 17 Pro Max": 4850,
     "iPad Pro 11\" (M4)": 8160, "iPad Pro 13\" (M4)": 10290,
     "iPad Air 11\" (M2)": 7606, "iPad Air 13\" (M2)": 9700,
     "iPad mini (6-е пок.)": 5124, "iPad mini (7-е пок. A17 Pro)": 5124,
@@ -986,7 +1082,9 @@ def get_connected_ios_devices() -> list:
         "iPhone13,4": "iPhone 12 Pro Max", "iPhone12,1": "iPhone 11",
         "iPhone14,7": "iPhone 14", "iPhone15,4": "iPhone 15",
         "iPhone17,1": "iPhone 16 Pro", "iPhone17,2": "iPhone 16 Pro Max",
-        "iPhone17,3": "iPhone 16", "iPhone17,4": "iPhone 16 Plus"
+        "iPhone17,3": "iPhone 16", "iPhone17,4": "iPhone 16 Plus",
+        "iPhone18,1": "iPhone 17 Pro", "iPhone18,2": "iPhone 17 Pro Max",
+        "iPhone18,3": "iPhone 17", "iPhone18,4": "iPhone 17 Air / Plus"
     }
 
     def _resolve_name(prod_type: str, fallback_udid: str) -> str:
@@ -996,16 +1094,17 @@ def get_connected_ios_devices() -> list:
     # 1. Python API pymobiledevice3
     if HAS_IOS_SUPPORT:
         try:
-            mux_devs = usbmux_list_devices()
+            mux_devs = ios_sync(usbmux_list_devices()) or []
             for d in mux_devs:
                 udid = getattr(d, "serial", None) or getattr(d, "udid", None) or str(d)
                 udid = normalize_ios_udid(udid)
                 if not udid or udid in seen_udids: continue
                 seen_udids.add(udid)
                 try:
-                    lockdown = create_using_usbmux(serial=udid)
-                    prod_type = lockdown.get_value(name="ProductType") or "iPhone"
-                    dev_name = lockdown.get_value(name="DeviceName") or "Apple Device"
+                    lockdown = ios_sync(create_using_usbmux(serial=udid))
+                    all_v = ios_get_all_values(lockdown)
+                    prod_type = all_v.get("ProductType") or ios_get_val(lockdown, "ProductType") or "iPhone"
+                    dev_name = all_v.get("DeviceName") or ios_get_val(lockdown, "DeviceName") or "Apple Device"
                     pretty_name = _resolve_name(prod_type, udid)
                     ios_devs.append((f"ios:{udid}", f"🍎 Apple {pretty_name} ({dev_name})"))
                 except Exception:
@@ -1138,52 +1237,65 @@ def get_full_ios_telemetry(udid: str) -> dict:
         lockdown = None
         if target_serial:
             try:
-                lockdown = create_using_usbmux(serial=target_serial)
+                lockdown = ios_sync(create_using_usbmux(serial=target_serial))
             except Exception:
                 lockdown = None
 
         if lockdown is None:
             # Подключаемся к первому доступному по USB iPhone без фильтра по serial
-            lockdown = create_using_usbmux()
+            try:
+                lockdown = ios_sync(create_using_usbmux())
+            except Exception:
+                lockdown = None
 
-        all_vals = {}
-        try: all_vals = lockdown.get_value() or {}
-        except Exception: pass
+        if lockdown is None:
+            # Fallback: опрашиваем usbmux_list_devices() для получения точного серийника
+            try:
+                mux_list = ios_sync(usbmux_list_devices()) or []
+                if mux_list:
+                    real_serial = getattr(mux_list[0], "serial", None) or str(mux_list[0])
+                    if real_serial:
+                        lockdown = ios_sync(create_using_usbmux(serial=real_serial))
+            except Exception:
+                lockdown = None
 
-        res["model"] = all_vals.get("ProductType") or lockdown.get_value(name="ProductType") or "iPhone"
-        res["serial"] = all_vals.get("SerialNumber") or lockdown.get_value(name="SerialNumber") or "—"
-        res["device"] = all_vals.get("DeviceName") or lockdown.get_value(name="DeviceName") or "iPhone"
-        res["android"] = all_vals.get("ProductVersion") or lockdown.get_value(name="ProductVersion") or "17.0"
-        res["baseband"] = all_vals.get("BasebandVersion") or lockdown.get_value(name="BasebandVersion") or "—"
-        res["build_version"] = all_vals.get("BuildVersion") or lockdown.get_value(name="BuildVersion") or "—"
-        res["model_number"] = all_vals.get("ModelNumber") or lockdown.get_value(name="ModelNumber") or "MU773"
-        res["region"] = all_vals.get("RegionInfo") or lockdown.get_value(name="RegionInfo") or "LL/A"
-        res["mlb_serial"] = all_vals.get("MLBSerialNumber") or lockdown.get_value(name="MLBSerialNumber") or "Заводской криптографический ID"
+        all_vals = ios_get_all_values(lockdown)
 
-        imei = all_vals.get("InternationalMobileEquipmentIdentity") or lockdown.get_value(name="InternationalMobileEquipmentIdentity")
+        res["model"] = all_vals.get("ProductType") or ios_get_val(lockdown, "ProductType") or "iPhone"
+        res["serial"] = all_vals.get("SerialNumber") or ios_get_val(lockdown, "SerialNumber") or "—"
+        res["device"] = all_vals.get("DeviceName") or ios_get_val(lockdown, "DeviceName") or "iPhone"
+        res["android"] = all_vals.get("ProductVersion") or ios_get_val(lockdown, "ProductVersion") or "17.0"
+        res["baseband"] = all_vals.get("BasebandVersion") or ios_get_val(lockdown, "BasebandVersion") or "—"
+        res["build_version"] = all_vals.get("BuildVersion") or ios_get_val(lockdown, "BuildVersion") or "—"
+        res["model_number"] = all_vals.get("ModelNumber") or ios_get_val(lockdown, "ModelNumber") or "MU773"
+        res["region"] = all_vals.get("RegionInfo") or ios_get_val(lockdown, "RegionInfo") or "LL/A"
+        res["mlb_serial"] = all_vals.get("MLBSerialNumber") or ios_get_val(lockdown, "MLBSerialNumber") or "Заводской криптографический ID"
+
+        imei = all_vals.get("InternationalMobileEquipmentIdentity") or ios_get_val(lockdown, "InternationalMobileEquipmentIdentity")
         if imei: res["imei1"] = str(imei)
-        imei2 = all_vals.get("InternationalMobileEquipmentIdentity2") or lockdown.get_value(name="InternationalMobileEquipmentIdentity2")
+        imei2 = all_vals.get("InternationalMobileEquipmentIdentity2") or ios_get_val(lockdown, "InternationalMobileEquipmentIdentity2")
         if imei2: res["imei2"] = str(imei2)
 
         # -------------------------------------------------------------
         # АНАЛИЗ ДИСПЛЕЯ (MOBILEGESTALT + IOREGISTRY + EEPROM)
         # -------------------------------------------------------------
         diag = None
-        try:
-            diag = DiagnosticsService(lockdown)
-        except Exception:
-            pass
+        if lockdown:
+            try:
+                diag = ios_sync(DiagnosticsService(lockdown))
+            except Exception:
+                pass
 
         mg_vals = {}
         if diag:
             try:
-                mg_vals = diag.mobilegestalt(keys=[
+                mg_vals = ios_sync(diag.mobilegestalt(keys=[
                     "RawPanelSerialNumber",
                     "PanelSerialNumber",
                     "CoverglassSerialNumber",
                     "AmbientLightSensorSerialNumber",
                     "DisplaySerialNumber"
-                ]) or {}
+                ])) or {}
             except Exception:
                 pass
 
@@ -1207,7 +1319,7 @@ def get_full_ios_telemetry(udid: str) -> dict:
         if diag:
             for plane in ("AppleCLCD2", "IOMobileFramebuffer", "AppleMultiTouchDevice"):
                 try:
-                    entry = diag.get_ioregistry_entry(plane)
+                    entry = ios_get_ioregistry(diag, plane)
                     if entry:
                         res_plane = _find_in_tree(entry, search_keys)
                         for k, v in res_plane.items():
@@ -1256,7 +1368,7 @@ def get_full_ios_telemetry(udid: str) -> dict:
 
         if diag:
             try:
-                io_reg = diag.get_ioregistry_entry("AppleSmartBattery")
+                io_reg = ios_get_ioregistry(diag, "AppleSmartBattery")
                 if io_reg and isinstance(io_reg, dict):
                     batt_info = io_reg.get("IORegistryEntryChildren", [{}])[0]
                     cycles = batt_info.get("CycleCount", cycles)
@@ -1285,10 +1397,10 @@ def get_full_ios_telemetry(udid: str) -> dict:
         faceid_ok = True
         try:
             if diag:
-                bio_reg = diag.get_ioregistry_entry("AppleBiometricSensor")
+                bio_reg = ios_get_ioregistry(diag, "AppleBiometricSensor")
                 if not bio_reg:
                     # Проверяем также через Lockdown
-                    bio_state = all_vals.get("PasswordProtected")
+                    bio_state = all_vals.get("PasswordProtected") or ios_get_val(lockdown, "PasswordProtected")
                     if bio_state is None and "iPad" not in res["model"]:
                         faceid_ok = True
         except Exception:
@@ -1343,10 +1455,10 @@ def get_full_ios_telemetry(udid: str) -> dict:
             ""
         )
         if not encl_color and lockdown:
-            try: encl_color = lockdown.get_value(name="DeviceEnclosureColor") or ""
+            try: encl_color = ios_get_val(lockdown, "DeviceEnclosureColor") or ""
             except Exception: pass
         if not encl_color and lockdown:
-            try: encl_color = lockdown.get_value(name="DeviceColor") or ""
+            try: encl_color = ios_get_val(lockdown, "DeviceColor") or ""
             except Exception: pass
 
         human_color = human_apple_color(encl_color)
@@ -1358,7 +1470,7 @@ def get_full_ios_telemetry(udid: str) -> dict:
         try:
             disk_info = {}
             if lockdown:
-                try: disk_info = lockdown.get_value(domain="com.apple.disk_usage") or {}
+                try: disk_info = ios_get_val(lockdown, domain="com.apple.disk_usage") or {}
                 except Exception: pass
             tot_bytes = (
                 disk_info.get("TotalDiskCapacity") or
@@ -4045,10 +4157,20 @@ class UltimateAndroidInspectorGUI(tk.Tk):
                 if getattr(self, "is_ios_current", False) or ser.startswith("ios:"):
                     raw_udid = ser.replace("ios:", "").strip()
                     try:
-                        from pymobiledevice3.lockdown import create_using_usbmux
-                        ld = create_using_usbmux(serial=raw_udid)
-                        _ = ld.all_values.get("DeviceName", "")
-                        is_online = True
+                        norm_u = normalize_ios_udid(raw_udid)
+                        ld = None
+                        if norm_u and norm_u not in ("apple_usb_detected", "", "None"):
+                            try:
+                                ld = ios_sync(create_using_usbmux(serial=norm_u))
+                            except Exception:
+                                ld = None
+                        if not ld:
+                            try:
+                                ld = ios_sync(create_using_usbmux())
+                            except Exception:
+                                ld = None
+                        vals = ios_get_all_values(ld)
+                        is_online = bool(vals)
                     except Exception:
                         is_online = False
                 else:
@@ -8316,12 +8438,12 @@ class UltimateAndroidInspectorGUI(tk.Tk):
                     target_serial = normalize_ios_udid(raw_udid)
                     lockdown = None
                     if target_serial not in ("apple_usb_detected", ""):
-                        try: lockdown = create_using_usbmux(serial=target_serial)
+                        try: lockdown = ios_sync(create_using_usbmux(serial=target_serial))
                         except Exception: pass
                     if not lockdown:
-                        lockdown = create_using_usbmux()
-                    diag = DiagnosticsService(lockdown)
-                    diag.restart()
+                        lockdown = ios_sync(create_using_usbmux())
+                    diag = ios_sync(DiagnosticsService(lockdown))
+                    ios_sync(diag.restart())
                     self.set_status("🔄 Команда перезагрузки отправлена на iPhone.", "#00e676")
                     messagebox.showinfo("Перезагрузка Apple iOS", "Команда перезагрузки успешно отправлена на iPhone / iPad!")
                 except Exception as e:
