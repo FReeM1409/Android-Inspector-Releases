@@ -1,5 +1,7 @@
 # Ignore Python source code (only release docs/assets tracked)
 *.py
+!dual_manager.py
+!build.py
 __pycache__/
 *.pyc
 *.pyo
