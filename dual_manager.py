@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 """
-Universal Android Inspector & Dual App Manager v4.3.0
+Universal Mobile Inspector (Android & iOS) v5.5.1
 Advanced Cyberpunk Hardware Telemetry, Deep Battery Diagnostic, Component Originality Verification,
 CyberGauge Canvas Radial Widgets, Network & IoT Security Audit, Dangerous Permissions Risk Scanner,
-Dual App Manager & Self-Updating System (Samsung / Xiaomi / POCO / OPPO / Vivo / Pixel).
+Dual App Manager & Self-Updating System (Samsung / Xiaomi / POCO / OPPO / Vivo / Pixel / Apple iPhone).
 Author: FReeM1409
 Repository: https://github.com/FReeM1409/Android-Inspector-Releases
 """
@@ -260,7 +260,7 @@ CREATE_NO_WINDOW = 0x08000000 if os.name == 'nt' else 0
 # =====================================================================
 # КОНФИГУРАЦИЯ И АВТООБНОВЛЕНИЕ
 # =====================================================================
-APP_VERSION = "5.0.0"
+APP_VERSION = "5.5.1"
 APP_NAME = "Universal Mobile Inspector (Android & iOS)"
 GITHUB_OWNER = "FReeM1409"
 GITHUB_REPO = "Android-Inspector-Releases"
@@ -684,6 +684,13 @@ APPLE_REGIONS = {
     "ZA/A": ("Сингапур", "Сингапур / Малайзия"),
 }
 
+def normalize_ios_udid(raw_udid: str) -> str:
+    """Нормализует UDID iOS устройства: на Windows pnputil выдает 24-символьный hex без дефиса."""
+    u = (raw_udid or "").strip()
+    if len(u) == 24 and "-" not in u and all(c in "0123456789abcdefABCDEF" for c in u):
+        return f"{u[:8]}-{u[8:]}"
+    return u
+
 def get_connected_ios_devices() -> list:
     """
     Тройной каскад обнаружения Apple iOS устройств (iPhone / iPad):
@@ -716,6 +723,7 @@ def get_connected_ios_devices() -> list:
             mux_devs = usbmux_list_devices()
             for d in mux_devs:
                 udid = getattr(d, "serial", None) or getattr(d, "udid", None) or str(d)
+                udid = normalize_ios_udid(udid)
                 if not udid or udid in seen_udids: continue
                 seen_udids.add(udid)
                 try:
@@ -742,8 +750,9 @@ def get_connected_ios_devices() -> list:
                 proc = subprocess.run(cmd, **kw)
                 out = proc.stdout.strip()
                 if out:
-                    found_udids = re.findall(r"([0-9a-fA-F]{40}|[0-9a-fA-F]{8}-[0-9a-fA-F]{16})", out)
+                    found_udids = re.findall(r"([0-9a-fA-F]{40}|[0-9a-fA-F]{8}-[0-9a-fA-F]{16}|[0-9a-fA-F]{24})", out)
                     for u in found_udids:
+                        u = normalize_ios_udid(u)
                         if u not in seen_udids:
                             seen_udids.add(u)
                             ios_devs.append((f"ios:{u}", f"🍎 Apple iPhone [{u[:8]}...] (USB Mux)"))
@@ -765,6 +774,7 @@ def get_connected_ios_devices() -> list:
                         curr_is_apple = True
                     elif curr_is_apple and "Serial Number:" in line_s:
                         sn = line_s.split(":", 1)[1].strip()
+                        sn = normalize_ios_udid(sn)
                         if sn and sn not in seen_udids:
                             seen_udids.add(sn)
                             ios_devs.append((f"ios:{sn}", f"🍎 Apple iPhone [Нажмите «Доверять» на экране iPhone]"))
@@ -776,7 +786,7 @@ def get_connected_ios_devices() -> list:
                 try:
                     ior_out = subprocess.run(["ioreg", "-p", "IOUSB", "-w0", "-l"], capture_output=True, text=True, errors="ignore", timeout=3).stdout
                     for match in re.finditer(r'"USB Serial Number"\s*=\s*"([^"]+)"', ior_out):
-                        sn = match.group(1).strip()
+                        sn = normalize_ios_udid(match.group(1).strip())
                         if (len(sn) >= 24 or len(sn) == 40) and sn not in seen_udids:
                             seen_udids.add(sn)
                             ios_devs.append((f"ios:{sn}", f"🍎 Apple iPhone [{sn[:8]}...] (USB)"))
@@ -797,9 +807,10 @@ def get_connected_ios_devices() -> list:
                     udids_win = re.findall(r"VID_05AC[^\\]*\\([0-9a-fA-F\-]{16,40})", pnp_out, re.IGNORECASE)
                     if udids_win:
                         for u in udids_win:
-                            if u not in seen_udids:
-                                seen_udids.add(u)
-                                ios_devs.append((f"ios:{u}", f"🍎 Apple iPhone [{u[:8]}...] (Нажмите «Доверять» на экране)"))
+                            u_norm = normalize_ios_udid(u)
+                            if u_norm not in seen_udids:
+                                seen_udids.add(u_norm)
+                                ios_devs.append((f"ios:{u_norm}", f"🍎 Apple iPhone [{u_norm[:8]}...] (Нажмите «Доверять» на экране)"))
                     else:
                         ios_devs.append(("ios:apple_usb_detected", "🍎 Apple iPhone (Обнаружен по USB — Нажмите «Доверять» на экране)"))
             except Exception:
@@ -846,7 +857,19 @@ def get_full_ios_telemetry(udid: str) -> dict:
         return res
 
     try:
-        lockdown = create_using_usbmux(serial=None if udid in ("apple_usb_detected", "") else udid)
+        norm_udid = normalize_ios_udid(udid)
+        target_serial = None if norm_udid in ("apple_usb_detected", "", "None") else norm_udid
+        lockdown = None
+        if target_serial:
+            try:
+                lockdown = create_using_usbmux(serial=target_serial)
+            except Exception:
+                lockdown = None
+
+        if lockdown is None:
+            # Подключаемся к первому доступному по USB iPhone без фильтра по serial
+            lockdown = create_using_usbmux()
+
         all_vals = {}
         try: all_vals = lockdown.get_value() or {}
         except Exception: pass
@@ -867,9 +890,64 @@ def get_full_ios_telemetry(udid: str) -> dict:
         if imei2: res["imei2"] = str(imei2)
 
         # -------------------------------------------------------------
-        # АНАЛИЗ ДИСПЛЕЯ (ДЕТЕКЦИЯ НЕОРИГИНАЛЬНОГО ЭКРАНА И REPAIR-ФЛАГОВ)
+        # АНАЛИЗ ДИСПЛЕЯ (MOBILEGESTALT + IOREGISTRY + EEPROM)
         # -------------------------------------------------------------
+        diag = None
+        try:
+            diag = DiagnosticsService(lockdown)
+        except Exception:
+            pass
+
+        mg_vals = {}
+        if diag:
+            try:
+                mg_vals = diag.mobilegestalt(keys=[
+                    "RawPanelSerialNumber",
+                    "PanelSerialNumber",
+                    "CoverglassSerialNumber",
+                    "AmbientLightSensorSerialNumber",
+                    "DisplaySerialNumber"
+                ]) or {}
+            except Exception:
+                pass
+
+        def _find_in_tree(obj, s_keys):
+            found_res = {}
+            if isinstance(obj, dict):
+                for k, v in obj.items():
+                    for sk in s_keys:
+                        if sk.lower() == str(k).lower() and sk not in found_res:
+                            found_res[sk] = v
+                    if "IORegistryEntryChildren" in obj and isinstance(obj["IORegistryEntryChildren"], list):
+                        for child in obj["IORegistryEntryChildren"]:
+                            found_res.update(_find_in_tree(child, s_keys))
+            elif isinstance(obj, list):
+                for item in obj:
+                    found_res.update(_find_in_tree(item, s_keys))
+            return found_res
+
+        search_keys = ["PanelSerialNumber", "LCM-Serial", "MtSn", "alpm-supported", "CalibrationData", "als-enabled"]
+        ioreg_findings = {}
+        if diag:
+            for plane in ("AppleCLCD2", "IOMobileFramebuffer", "AppleMultiTouchDevice"):
+                try:
+                    entry = diag.get_ioregistry_entry(plane)
+                    if entry:
+                        res_plane = _find_in_tree(entry, search_keys)
+                        for k, v in res_plane.items():
+                            if k not in ioreg_findings:
+                                ioreg_findings[k] = v
+                except Exception:
+                    pass
+
         panel_sn = (
+            mg_vals.get("RawPanelSerialNumber") or
+            mg_vals.get("PanelSerialNumber") or
+            mg_vals.get("CoverglassSerialNumber") or
+            mg_vals.get("DisplaySerialNumber") or
+            ioreg_findings.get("PanelSerialNumber") or
+            ioreg_findings.get("LCM-Serial") or
+            ioreg_findings.get("MtSn") or
             all_vals.get("RawPanelSerialNumber") or
             all_vals.get("PanelSerialNumber") or
             all_vals.get("LcdPanelId") or
@@ -886,20 +964,10 @@ def get_full_ios_telemetry(udid: str) -> dict:
                 is_screen_replaced = True
                 screen_fail_reason = "Серийный номер тачскрина сброшен в нули или отсутствует в EEPROM матрицы."
 
-        # Проверка 2: IORegistry ветка дисплейного контроллера (AppleCLCD2 / IOMobileFramebuffer)
-        diag = None
-        try:
-            diag = DiagnosticsService(lockdown)
-            clcd_info = diag.get_ioregistry_entry("AppleCLCD2") or diag.get_ioregistry_entry("IOMobileFramebuffer") or {}
-            if isinstance(clcd_info, dict) and "IORegistryEntryChildren" in clcd_info:
-                disp_child = clcd_info.get("IORegistryEntryChildren", [{}])[0]
-                # На копиях экранов часто отсутствует Ambient Light Sensor или TrueTone калибровка
-                has_als = disp_child.get("alpm-supported") or disp_child.get("als-enabled")
-                if has_als is False:
-                    is_screen_replaced = True
-                    screen_fail_reason = "Отсутствует датчик внешней освещенности ALS и профиль TrueTone."
-        except Exception:
-            pass
+        # Проверка 2: IORegistry ветка дисплейного контроллера (alpm-supported / als)
+        if "alpm-supported" in ioreg_findings and ioreg_findings["alpm-supported"] is False:
+            is_screen_replaced = True
+            screen_fail_reason = "Отсутствует датчик внешней освещенности ALS и профиль TrueTone."
 
         # -------------------------------------------------------------
         # ДИАГНОСТИКА АККУМУЛЯТОРА ЧЕРЕЗ AppleSmartBattery
@@ -1291,7 +1359,7 @@ def detect_cameras(serial: str = None) -> dict:
         if len(mps) > 1:
             info["front_mp"] = mps[1]
     else:
-        c_props = run_adb("shell 'getprop | grep -iE \"camera|sensor\.info\"'", serial)
+        c_props = run_adb(r"shell 'getprop | grep -iE \"camera|sensor\.info\"'", serial)
         m_mp = re.findall(r"(\d{2,3})[Mm][Pp]?", c_props)
         if m_mp:
             found = [int(x) for x in m_mp if 2 <= int(x) <= 250]
@@ -1831,7 +1899,8 @@ def check_accounts_and_frp(serial: str = None) -> tuple:
 def check_battery_bms_fraud(t: dict, serial: str = None) -> tuple:
     """Анализирует дату первой активации устройства и циклы АКБ на предмет сброса счетчика программатором."""
     bd = t.get("batt_diag", {})
-    cycles = bd.get("cycles")
+    cycles_raw = str(bd.get("cycles", "")).strip()
+    cycles_int = int(cycles_raw) if cycles_raw.isdigit() else -1
     
     fb_raw = run_adb("shell getprop ro.runtime.firstboot", serial).strip()
     firstboot_ts = 0
@@ -1844,10 +1913,10 @@ def check_battery_bms_fraud(t: dict, serial: str = None) -> tuple:
     
     age_days = max(0, int((time.time() - firstboot_ts) / 86400)) if firstboot_ts > 0 else 0
     
-    if isinstance(cycles, int) and cycles >= 0 and age_days > 365 and cycles < 25:
-        return "[⚠ ПОДОЗРЕНИЕ НА СБРОС]", "#ffca28", f"Возраст системы: ~{age_days // 30} мес. ({age_days} дн.), но зафиксировано всего {cycles} циклов АКБ! Высокая вероятность сброса счетчика программатором перекупщика или замены контроллера."
+    if cycles_int >= 0 and age_days > 365 and cycles_int < 25:
+        return "[⚠ ПОДОЗРЕНИЕ НА СБРОС]", "#ffca28", f"Возраст системы: ~{age_days // 30} мес. ({age_days} дн.), но зафиксировано всего {cycles_int} циклов АКБ! Высокая вероятность сброса счетчика программатором перекупщика или замены контроллера."
     else:
-        cyc_str = f"{cycles} циклов" if isinstance(cycles, int) else "активен"
+        cyc_str = f"{cycles_int} циклов" if cycles_int >= 0 else "активен"
         age_str = f"~{age_days // 30} мес." if age_days > 0 else "новое"
         return "[✔ ОРИГИНАЛ]", "#00e676", f"Ресурс батареи ({cyc_str}) гармонично соотносится со сроком эксплуатации устройства ({age_str}). Признаков вмешательства в BMS не обнаружено."
 
@@ -4173,6 +4242,9 @@ class UltimateAndroidInspectorGUI(tk.Tk):
         for w in self.cards_scrollable_frame.winfo_children():
             w.destroy()
 
+        tel = getattr(self, "current_tel", {}) or {}
+        is_ios = tel.get("is_ios", False) or (self.current_serial and self.current_serial.startswith("ios:"))
+
         for title, st_txt, st_col, desc in orig_cards:
             if self.privacy_mode and hasattr(self, "current_tel") and self.current_tel:
                 real_sn = self.current_tel.get("serial", "")
@@ -4191,12 +4263,106 @@ class UltimateAndroidInspectorGUI(tk.Tk):
             lbl_badge = tk.Label(h_row, text=st_txt, font=("Segoe UI", 10, "bold"), bg="#1a1a2b", fg=st_col)
             lbl_badge.pack(side=tk.RIGHT)
 
+            is_display_card = "7. Дисплейный модуль" in title or ("Дисплей" in title and is_ios)
             lbl_desc = tk.Label(
                 card, text=desc,
                 font=("Segoe UI", 9), bg="#1a1a2b", fg="#9e9eb8",
                 wraplength=1050, justify="left"
             )
-            lbl_desc.pack(anchor="w", padx=16, pady=(0, 10))
+            lbl_desc.pack(anchor="w", padx=16, pady=(0, 6 if (is_display_card and is_ios) else 10))
+
+            # Быстрые кнопки-переключатели эксперта для экрана iPhone
+            if is_display_card and is_ios:
+                btn_box = tk.Frame(card, bg="#1a1a2b")
+                btn_box.pack(fill="x", padx=16, pady=(0, 10))
+                tk.Label(btn_box, text="Экспертная оценка True Tone:", font=("Segoe UI", 8, "bold"), bg="#1a1a2b", fg="#80d8ff").pack(side=tk.LEFT, padx=(0, 8))
+                tk.Button(
+                    btn_box, text="✔ True Tone ЕСТЬ в шторке", font=("Segoe UI", 8, "bold"),
+                    bg="#183626", fg="#00e676", activebackground="#25543c", relief=tk.FLAT, cursor="hand2", padx=8, pady=2,
+                    command=lambda: self.set_ios_truetone_manual(True)
+                ).pack(side=tk.LEFT, padx=3)
+                tk.Button(
+                    btn_box, text="✘ True Tone ОТСУТСТВУЕТ / Китайская копия экрана", font=("Segoe UI", 8, "bold"),
+                    bg="#3a1e28", fg="#ff5252", activebackground="#542636", relief=tk.FLAT, cursor="hand2", padx=8, pady=2,
+                    command=lambda: self.set_ios_truetone_manual(False)
+                ).pack(side=tk.LEFT, padx=3)
+
+    def set_ios_truetone_manual(self, has_truetone: bool):
+        """Ручной вердикт эксперта по True Tone: мгновенно меняет карточку №7, снижает Trust Score на 30 баллов при замене и обновляет досье."""
+        tel = getattr(self, "current_tel", None)
+        if not tel:
+            messagebox.showwarning("Внимание", "Сначала подключите устройство.")
+            return
+
+        orig_cards = list(tel.get("orig_cards", []))
+        new_cards = []
+        found_card = False
+
+        if not has_truetone:
+            tel["screen_replacement_flag"] = True
+            tel["screen_manual_verdict"] = "fake"
+            card_screen = (
+                "7. Дисплейный модуль (TrueTone & Touch)",
+                "[✘ НЕОРИГИНАЛЬНЫЙ ЭКРАН (Отсутствует True Tone / Замена матрицы)]",
+                "#ff5252",
+                "ВНИМАНИЕ! Дисплей заменен на стороннюю копию (In-Cell/TFT/OLED) без калибровки EEPROM! Функция True Tone заблокирована/отсутствует в Пункте Управления, Secure Enclave не спарен с контроллером матрицы."
+            )
+            for c in orig_cards:
+                if "7. Дисплейный модуль" in c[0] or "Дисплей" in c[0] or "Экран" in c[0]:
+                    new_cards.append(card_screen)
+                    found_card = True
+                else:
+                    new_cards.append(c)
+            if not found_card:
+                new_cards.append(card_screen)
+
+            # Пересчитываем Trust Score: снимаем 30 баллов
+            base_score = 98
+            if tel.get("batt_diag", {}).get("soh_pct", 100) < 80: base_score -= 10
+            cyc_v = str(tel.get("batt_diag", {}).get("cycles", "")).strip()
+            if cyc_v.isdigit() and int(cyc_v) > 400 and tel.get("batt_diag", {}).get("soh_pct", 100) >= 99.0:
+                base_score -= 20
+            tel["trust_score"] = max(20, min(100, base_score - 30))
+            tel["verdict_short"] = "ВНИМАНИЕ: НЕОРИГИНАЛЬНЫЙ ЭКРАН (Отсутствует True Tone / Замена матрицы)"
+            play_sfx("error", self.sound_enabled)
+            self.set_status("✘ Зафиксирован неоригинальный экран (True Tone отсутствует). Trust Score: -30", "#ff5252")
+        else:
+            tel["screen_replacement_flag"] = False
+            tel["screen_manual_verdict"] = "original"
+            p_sn = tel.get("serial", "Заводской (Спарен с Logic Board)")
+            card_screen = (
+                "7. Дисплейный модуль (TrueTone & Touch)",
+                "[✔ ОРИГИНАЛ (Apple OLED)]",
+                "#00e676",
+                "Заводской дисплейный модуль Super Retina XDR OLED. Серийный номер матрицы спарен с Secure Enclave, датчик внешней освещенности ALS и True Tone активны."
+            )
+            for c in orig_cards:
+                if "7. Дисплейный модуль" in c[0] or "Дисплей" in c[0] or "Экран" in c[0]:
+                    new_cards.append(card_screen)
+                    found_card = True
+                else:
+                    new_cards.append(c)
+            if not found_card:
+                new_cards.append(card_screen)
+
+            base_score = 98
+            if tel.get("batt_diag", {}).get("soh_pct", 100) < 80: base_score -= 10
+            tel["trust_score"] = max(20, min(100, base_score))
+            tel["verdict_short"] = "100% APPLE ORIGINAL (iOS Verified)"
+            play_sfx("success", self.sound_enabled)
+            self.set_status("✔ Подтвержден оригинальный экран (True Tone активен).", "#00e676")
+
+        tel["orig_cards"] = new_cards
+        self._render_originality_cards(new_cards)
+        if hasattr(self, 'gauge_trust'):
+            self.gauge_trust.set_value(tel["trust_score"], f"{tel['trust_score']}/100%")
+            if tel["trust_score"] >= 85:
+                self.lbl_trust_badge.config(text="[✔ ВЫСОКИЙ УРОВЕНЬ ЗАЩИТЫ]", fg="#00e676")
+            elif tel["trust_score"] >= 70:
+                self.lbl_trust_badge.config(text="[⚠ ТРЕБУЕТ ВНИМАНИЯ]", fg="#ffca28")
+            else:
+                self.lbl_trust_badge.config(text="[✘ РИСК: НЕОРИГИНАЛЬНЫЕ ДЕТАЛИ]", fg="#ff5252")
+        self._populate_ios_dossier_text(tel)
 
     # -----------------------------------------------------------------
     # ВКЛАДКА 4: 🌐 СЕТЕВОЙ АУДИТ & ЗАЩИТА IOT (ИБ ДИССЕРТАЦИОННЫЙ МОДУЛЬ)
@@ -5484,6 +5650,20 @@ class UltimateAndroidInspectorGUI(tk.Tk):
         tk.Label(f1, text="💡 ПРОВЕРКА TRUE TONE ВРУЧНУЮ: Смахните шторку Пункта Управления сверху вниз на iPhone. Зажмите ползунок Яркости экрана. Внизу должны быть 3 кнопки: «Темный режим», «Night Shift» и «True Tone».\n⚠ ЕСЛИ КНОПКИ «TRUE TONE» НЕТ — экран 100% менялся на дешевую неоригинальную копию без прошивки EEPROM через JCID/iCopy!",
                  font=("Segoe UI", 8), bg="#1a1a2b", fg="#e4e4ef", wraplength=800, justify="left").pack(anchor="w", pady=(4, 0))
 
+        btn_tt_box = tk.Frame(f1, bg="#1a1a2b")
+        btn_tt_box.pack(fill=tk.X, pady=(6, 2))
+        tk.Label(btn_tt_box, text="Быстрый вердикт эксперта:", font=("Segoe UI", 8, "bold"), bg="#1a1a2b", fg="#80d8ff").pack(side=tk.LEFT, padx=(0, 8))
+        tk.Button(
+            btn_tt_box, text="✔ True Tone ЕСТЬ в шторке", font=("Segoe UI", 9, "bold"),
+            bg="#00c853", fg="#ffffff", activebackground="#00e676", relief=tk.FLAT, cursor="hand2", padx=10, pady=3,
+            command=lambda: (self.set_ios_truetone_manual(True), dlg.destroy(), self.launch_ios_interactive_test_dialog())
+        ).pack(side=tk.LEFT, padx=3)
+        tk.Button(
+            btn_tt_box, text="✘ True Tone ОТСУТСТВУЕТ / Китайская копия экрана", font=("Segoe UI", 9, "bold"),
+            bg="#d32f2f", fg="#ffffff", activebackground="#f44336", relief=tk.FLAT, cursor="hand2", padx=10, pady=3,
+            command=lambda: (self.set_ios_truetone_manual(False), dlg.destroy(), self.launch_ios_interactive_test_dialog())
+        ).pack(side=tk.LEFT, padx=3)
+
         # 2. Блок Touchscreen & MultiTouch
         f2 = tk.Frame(content, bg="#1a1a2b", padx=12, pady=10, highlightthickness=1, highlightbackground="#2f2f48")
         f2.pack(fill=tk.X, pady=4)
@@ -5940,6 +6120,9 @@ class UltimateAndroidInspectorGUI(tk.Tk):
     def debloat_disable_selected(self):
         ser = self.current_serial
         if not ser or not hasattr(self, 'tree_debloat'): return
+        if ser.startswith("ios:"):
+            messagebox.showinfo("Режим Apple iOS", "Эта функция предназначена для ОС Android.")
+            return
         sel = self.tree_debloat.selection()
         if not sel:
             messagebox.showwarning("Внимание", "Выберите пакет в таблице деблоатера.")
@@ -5954,6 +6137,9 @@ class UltimateAndroidInspectorGUI(tk.Tk):
     def debloat_enable_selected(self):
         ser = self.current_serial
         if not ser or not hasattr(self, 'tree_debloat'): return
+        if ser.startswith("ios:"):
+            messagebox.showinfo("Режим Apple iOS", "Эта функция предназначена для ОС Android.")
+            return
         sel = self.tree_debloat.selection()
         if not sel:
             messagebox.showwarning("Внимание", "Выберите пакет в таблице деблоатера.")
@@ -5969,6 +6155,9 @@ class UltimateAndroidInspectorGUI(tk.Tk):
         ser = self.current_serial
         if not ser:
             messagebox.showwarning("Внимание", "Подключите устройство через USB.")
+            return
+        if ser.startswith("ios:"):
+            messagebox.showinfo("Режим Apple iOS", "Эта функция предназначена для ОС Android.")
             return
         target_pkgs = []
         if preset_name == "samsung":
@@ -5991,6 +6180,9 @@ class UltimateAndroidInspectorGUI(tk.Tk):
     def debloat_restore_all(self):
         ser = self.current_serial
         if not ser: return
+        if ser.startswith("ios:"):
+            messagebox.showinfo("Режим Apple iOS", "Эта функция предназначена для ОС Android.")
+            return
         for pkg, _, _, _ in BLOATWARE_DATABASE:
             run_adb(f"shell pm enable {pkg}", ser)
         play_sfx("success", self.sound_enabled)
@@ -6212,6 +6404,7 @@ class UltimateAndroidInspectorGUI(tk.Tk):
             "--noconfirm",
             "--onefile",
             "--noconsole",
+            "--exclude-module", "pkg_resources",
             "--add-binary", "adb.exe;.",
             "--add-binary", "AdbWinApi.dll;.",
             "--add-binary", "AdbWinUsbApi.dll;.",
@@ -6244,7 +6437,7 @@ class UltimateAndroidInspectorGUI(tk.Tk):
         self.after(0, lambda: self.log_console("[4/5] Публикация релиза на GitHub..."))
         gh_bin = shutil.which("gh")
         if gh_bin:
-            notes = "Android Ultimate Inspector v4.3.0: Добавлены универсальные неоновые спидометры CyberGauge на Canvas (SOH %, заряд %, Индекс Доверия), новая вкладка сетевого аудита и защиты IoT (SELinux, Root, MitM прокси, открытые порты, ARP-сканер соседних умных устройств), анализатор опасных разрешений в Dual Apps с рекомендацией изоляции в клоны (95/999) и экспорт официального графического HTML-сертификата с криптографической подписью SHA-256."
+            notes = f"Universal Mobile Inspector (Android & Apple iOS) Hotfix v{APP_VERSION}: исключен модуль pkg_resources для предотвращения краша pyi_rth_pkgres / setuptipsum.txt, добавлена защита от fork bomb процессов, исправлена проверка циклов АКБ check_battery_bms_fraud, нормализация 24-символьного UDID iPhone, расширен опрос MobileGestalt/IORegistry для экрана iPhone и добавлены кнопки быстрого вердикта True Tone."
             gh_cmd = [
                 gh_bin, "release", "create", f"v{APP_VERSION}",
                 exe_path,
@@ -7080,6 +7273,9 @@ class UltimateAndroidInspectorGUI(tk.Tk):
         self.set_status("📋 Досье скопировано в буфер обмена!", "#00e676")
 
     def tool_take_screenshot(self):
+        if self.current_serial and self.current_serial.startswith("ios:"):
+            messagebox.showinfo("Режим Apple iOS", "Эта функция предназначена для ОС Android.")
+            return
         ts = time.strftime("%Y%m%d_%H%M%S")
         save_to = filedialog.asksaveasfilename(
             title="Сохранить скриншот", initialfile=f"Screenshot_{ts}.png",
@@ -7097,6 +7293,9 @@ class UltimateAndroidInspectorGUI(tk.Tk):
         threading.Thread(target=_worker, daemon=True).start()
 
     def tool_install_apk_from_pc(self):
+        if self.current_serial and self.current_serial.startswith("ios:"):
+            messagebox.showinfo("Режим Apple iOS", "Эта функция предназначена для ОС Android.")
+            return
         apk_file = filedialog.askopenfilename(
             title="Выберите APK", filetypes=[("Android APK", "*.apk"), ("All Files", "*.*")]
         )
@@ -7115,6 +7314,29 @@ class UltimateAndroidInspectorGUI(tk.Tk):
         threading.Thread(target=_worker, daemon=True).start()
 
     def tool_reboot(self, mode: str, desc: str):
+        ser = self.current_serial or ""
+        if ser.startswith("ios:"):
+            if mode == "":
+                if not messagebox.askyesno("Перезагрузка iPhone", "Перезагрузить подключенный iPhone / iPad?"): return
+                try:
+                    raw_udid = ser[4:]
+                    target_serial = normalize_ios_udid(raw_udid)
+                    lockdown = None
+                    if target_serial not in ("apple_usb_detected", ""):
+                        try: lockdown = create_using_usbmux(serial=target_serial)
+                        except Exception: pass
+                    if not lockdown:
+                        lockdown = create_using_usbmux()
+                    diag = DiagnosticsService(lockdown)
+                    diag.restart()
+                    self.set_status("🔄 Команда перезагрузки отправлена на iPhone.", "#00e676")
+                    messagebox.showinfo("Перезагрузка Apple iOS", "Команда перезагрузки успешно отправлена на iPhone / iPad!")
+                except Exception as e:
+                    messagebox.showerror("Ошибка перезагрузки iOS", f"Не удалось перезагрузить iOS-устройство:\n{e}\n\nУбедитесь, что экран разблокирован и на устройстве нажато «Доверять».")
+            else:
+                messagebox.showinfo("Режим Apple iOS", "Режимы Recovery и DFU на устройствах Apple вызываются комбинацией аппаратных клавиш на корпусе устройства.")
+            return
+
         if not messagebox.askyesno("Перезагрузка", f"Выполнить действие: {desc}?"): return
         run_adb(f"reboot {mode}".strip(), self.current_serial)
         self.set_status(f"🔄 Команда перезагрузки ({desc}) отправлена.", "#ffca28")
@@ -7358,9 +7580,12 @@ if __name__ == "__main__":
     import multiprocessing
     multiprocessing.freeze_support()
 
-    # Защита от бесконечного рекурсивного порождения процессов EXE
+    # Защита от бесконечного размножения процессов EXE (fork bomb / subprocess recursion)
+    # Если дочерний процесс по ошибке вызвал sys.executable с флагом -m, usbmux и т.д.
+    if any(arg in ("-m", "-c", "usbmux", "pymobiledevice3", "--multiprocessing-fork") or str(arg).startswith("-m") for arg in sys.argv[1:]):
+        sys.exit(0)
     if getattr(sys, 'frozen', False):
-        if len(sys.argv) > 1 and sys.argv[1] in ("-m", "-c", "--multiprocessing-fork"):
+        if len(sys.argv) > 1 and any(arg in ("-m", "-c", "usbmux", "pymobiledevice3", "--multiprocessing-fork") or str(arg).startswith("-m") for arg in sys.argv[1:]):
             sys.exit(0)
 
     try:
