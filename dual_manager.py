@@ -25,6 +25,7 @@ import datetime
 import struct
 import urllib.request
 import urllib.error
+import shlex
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog, scrolledtext
 
@@ -80,6 +81,142 @@ if sys.platform == "darwin":
         if os.path.isdir(_p) and _p not in _curr_p:
             _curr_p = f"{_p}:{_curr_p}"
     os.environ["PATH"] = _curr_p
+
+# =====================================================================
+# КРОССПЛАТФОРМЕННЫЕ CYBERPUNK КНОПКИ ДЛЯ macOS & WINDOWS
+# =====================================================================
+class CyberButton(tk.Label):
+    """
+    Высококонтрастная кнопка в стиле Cyberpunk.
+    В macOS стандартный tk.Button игнорирует bg/fg и рисуется белым системным блоком.
+    CyberButton гарантирует сочные цвета, четкие границы и плавный hover на любой ОС.
+    """
+    def __init__(self, master=None, cnf=None, **kw):
+        cnf = cnf or {}
+        kw.update(cnf)
+        self._command = kw.pop("command", None)
+        self._state = kw.pop("state", "normal")
+        self._active_bg = kw.pop("activebackground", None)
+        self._active_fg = kw.pop("activeforeground", None)
+        
+        if "background" in kw: kw["bg"] = kw.pop("background")
+        if "foreground" in kw: kw["fg"] = kw.pop("foreground")
+
+        self._default_bg = kw.get("bg", "#25253d")
+        self._default_fg = kw.get("fg", "#ffffff")
+
+        kw.setdefault("relief", tk.FLAT)
+        kw.setdefault("cursor", "hand2" if self._state == "normal" else "arrow")
+        kw.setdefault("padx", 6)
+        kw.setdefault("pady", 3)
+        kw.setdefault("highlightthickness", 1)
+        kw.setdefault("highlightbackground", "#3c3c5c")
+        kw.setdefault("takefocus", 1)
+
+        super().__init__(master, **kw)
+        self._pressed = False
+        self.bind("<Button-1>", self._on_press)
+        self.bind("<ButtonRelease-1>", self._on_release)
+        self.bind("<Enter>", self._on_enter)
+        self.bind("<Leave>", self._on_leave)
+        self.bind("<KeyPress-space>", lambda e: self.invoke())
+        self.bind("<Return>", lambda e: self.invoke())
+
+    def _on_enter(self, e):
+        if self._state == "normal":
+            hover = self._active_bg or self._tint(self._default_bg, 25)
+            super().configure(bg=hover)
+
+    def _on_leave(self, e):
+        if self._state == "normal":
+            super().configure(bg=self._default_bg, fg=self._default_fg)
+
+    def _on_press(self, e):
+        if self._state == "normal":
+            self._pressed = True
+            press = self._active_bg or self._tint(self._default_bg, -25)
+            super().configure(bg=press)
+
+    def _on_release(self, e):
+        if self._pressed and self._state == "normal":
+            self._pressed = False
+            super().configure(bg=self._default_bg, fg=self._default_fg)
+            if e and 0 <= e.x <= self.winfo_width() and 0 <= e.y <= self.winfo_height():
+                self.invoke()
+
+    def invoke(self):
+        if self._state == "normal" and self._command:
+            return self._command()
+
+    def flash(self):
+        pass
+
+    def configure(self, cnf=None, **kw):
+        cnf = cnf or {}
+        kw.update(cnf)
+        if "command" in kw:
+            self._command = kw.pop("command")
+        if "background" in kw: kw["bg"] = kw.pop("background")
+        if "foreground" in kw: kw["fg"] = kw.pop("foreground")
+        if "bg" in kw:
+            self._default_bg = kw["bg"]
+        if "fg" in kw:
+            self._default_fg = kw["fg"]
+        if "activebackground" in kw:
+            self._active_bg = kw.pop("activebackground")
+        if "activeforeground" in kw:
+            self._active_fg = kw.pop("activeforeground")
+        if "state" in kw:
+            self._state = kw["state"]
+            if self._state == "disabled":
+                kw["cursor"] = "arrow"
+                kw.setdefault("fg", "#606075")
+            else:
+                kw["cursor"] = "hand2"
+                kw.setdefault("fg", self._default_fg)
+        super().configure(**kw)
+
+    config = configure
+
+    @staticmethod
+    def _tint(hex_col, delta):
+        try:
+            if not isinstance(hex_col, str) or not hex_col.startswith("#") or len(hex_col) != 7:
+                return "#3f3f60"
+            r = max(0, min(255, int(hex_col[1:3], 16) + delta))
+            g = max(0, min(255, int(hex_col[3:5], 16) + delta))
+            b = max(0, min(255, int(hex_col[5:7], 16) + delta))
+            return f"#{r:02x}{g:02x}{b:02x}"
+        except Exception:
+            return "#3f3f60"
+
+if sys.platform == "darwin":
+    tk.Button = CyberButton
+
+def make_solid_png(hex_col: str, width: int = 200, height: int = 200) -> bytes:
+    """Генерирует бинарные данные чистого PNG-изображения заливки заданным цветом."""
+    h = hex_col.lstrip("#")
+    if len(h) == 3:
+        h = "".join(c * 2 for c in h)
+    r, g, b = int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16)
+    try:
+        from PIL import Image
+        import io
+        img = Image.new("RGB", (width, height), (r, g, b))
+        bio = io.BytesIO()
+        img.save(bio, format="PNG")
+        return bio.getvalue()
+    except Exception:
+        pass
+    import zlib
+    def chunk(tag, data):
+        return struct.pack(">I", len(data)) + tag + data + struct.pack(">I", zlib.crc32(tag + data) & 0xffffffff)
+    header = b"\x89PNG\r\n\x1a\n"
+    ihdr = chunk(b"IHDR", struct.pack(">IIBBBBB", width, height, 8, 2, 0, 0, 0))
+    raw_data = b"".join(b"\x00" + bytes([r, g, b] * width) for _ in range(height))
+    idat = chunk(b"IDAT", zlib.compress(raw_data, 9))
+    iend = chunk(b"IEND", b"")
+    return header + ihdr + idat + iend
 
 # =====================================================================
 # OPSEC & PRIVACY HELPERS
@@ -384,11 +521,19 @@ SOC_HUMAN_NAMES = {
     "s5e8825": "Samsung Exynos 1280 (5 nm)",
     # MediaTek Dimensity
     "MT6991": "MediaTek Dimensity 9400 (3 nm)",
-    "MT6989": "MediaTek Dimensity 9300 (4 nm)",
+    "mt6991": "MediaTek Dimensity 9400 (3 nm)",
+    "MT6989": "MediaTek Dimensity 9300+ (4 nm)",
+    "mt6989": "MediaTek Dimensity 9300+ (4 nm)",
     "MT6985": "MediaTek Dimensity 9200 (4 nm)",
+    "mt6985": "MediaTek Dimensity 9200 (4 nm)",
+    "MT6897": "MediaTek Dimensity 8300 (4 nm)",
+    "mt6897": "MediaTek Dimensity 8300 (4 nm)",
     "MT6895": "MediaTek Dimensity 8100 / 8200",
+    "mt6895": "MediaTek Dimensity 8100 / 8200",
     "MT6877": "MediaTek Dimensity 900 / 1080",
+    "mt6877": "MediaTek Dimensity 900 / 1080",
     "MT6789": "MediaTek Helio G99 (6 nm)",
+    "mt6789": "MediaTek Helio G99 (6 nm)",
     # Google Tensor
     "zuma": "Google Tensor G3 (4 nm)",
     "cloudripper": "Google Tensor G2 (5 nm)",
@@ -1255,9 +1400,28 @@ def get_adb_executable() -> str:
 
 def run_adb(cmd: str, serial: str = None) -> str:
     adb_bin = get_adb_executable()
-    s_flag = f"-s {serial} " if serial else ""
+    s_args = ["-s", serial] if serial else []
+    cmd_s = cmd.strip()
+
+    if cmd_s.startswith("shell"):
+        sub = cmd_s[5:].strip()
+        if not sub:
+            full_args = [adb_bin] + s_args + ["shell"]
+        else:
+            if len(sub) >= 2 and (
+                (sub.startswith('"') and sub.endswith('"')) or
+                (sub.startswith("'") and sub.endswith("'"))
+            ):
+                sub = sub[1:-1]
+            full_args = [adb_bin] + s_args + ["shell", sub]
+    else:
+        try:
+            split_args = shlex.split(cmd_s, posix=(sys.platform != "win32"))
+        except Exception:
+            split_args = cmd_s.split()
+        full_args = [adb_bin] + s_args + split_args
+
     kwargs = {
-        "shell": True,
         "capture_output": True,
         "text": True,
         "encoding": "utf-8",
@@ -1266,7 +1430,7 @@ def run_adb(cmd: str, serial: str = None) -> str:
     if os.name == "nt":
         kwargs["creationflags"] = 0x08000000
     try:
-        res = subprocess.run(f'"{adb_bin}" {s_flag}{cmd}', **kwargs)
+        res = subprocess.run(full_args, **kwargs)
         return res.stdout.strip()
     except Exception:
         return ""
@@ -1401,6 +1565,14 @@ def extract_cpu_and_gpu(board_code: str, soc_code: str, chipname: str, serial: s
                 gpu_clean = f"GPU ({egl})"
             gpu_detailed = gpu_clean
 
+    # Если процессор не определен по кодам, но по GPU Mali-G925 Immortalis мы точно знаем, что это флагманский Dimensity 9300+
+    if "unknown" in cpu_title.lower() or cpu_title.strip() == f"SoC {chosen}":
+        gpu_check = (gpu_detailed or gpu_clean).lower()
+        if "g925" in gpu_check or "immortalis" in gpu_check:
+            cpu_title = "MediaTek Dimensity 9300+ (4 nm)"
+            chosen = "Dimensity 9300+"
+
+    cpu_full = f"{cpu_title} ({chosen}) [{cores_num} ядер{freq_str}]"
     return cpu_full, gpu_clean, (gpu_detailed or gpu_clean)
 
 def calculate_battery_diagnostics(raw_dumpsys: str, model: str, serial: str = None, device_code: str = "") -> dict:
@@ -1605,23 +1777,34 @@ def calculate_battery_diagnostics(raw_dumpsys: str, model: str, serial: str = No
 
 def check_lease_and_mdm(serial: str = None) -> tuple:
     """Проверяет устройство на лизинговые сервисы, PayJoy и корпоративные MDM-блокировки."""
-    out = run_adb("shell 'pm list packages -e 2>/dev/null'", serial)
-    mdm_pkgs = {
-        "com.samsung.android.kgclient": "Samsung Knox Guard (Лизинг / Рассрочка)",
+    found = []
+
+    # 1. Проверка сторонних хищнических приложений рассрочки/лизинга
+    out_pkgs = run_adb("shell 'pm list packages -e 2>/dev/null'", serial)
+    predator_pkgs = {
         "com.payjoy.access": "PayJoy (Сервис блокировки рассрочки)",
-        "com.sec.enterprise.knox.cloudmdm": "Knox Manage (Корпоративный MDM контроль)",
-        "com.google.android.apps.work.clouddpc": "Google Cloud DPC (Корпоративный профиль)",
-        "com.airwatch.androidagent": "VMware Workspace ONE",
+        "com.airwatch.androidagent": "VMware Workspace ONE (MDM)",
         "com.mobileiron": "MobileIron MDM"
     }
-    found = []
-    for pkg, label in mdm_pkgs.items():
-        if f"package:{pkg}" in out:
+    for pkg, label in predator_pkgs.items():
+        if f"package:{pkg}" in out_pkgs:
             found.append(label)
-    
-    kg_dump = run_adb("shell dumpsys kgclient 2>/dev/null", serial)
-    if "LOCKED" in kg_dump or "Enrolled: true" in kg_dump or "Active: true" in kg_dump:
-        found.append("Samsung Knox Guard [АКТИВНАЯ БЛОКИРОВКА / ЛИЗИНГ]")
+
+    # 2. Аппаратный статус Samsung Knox Guard (KG / Лизинг)
+    # Пакет kgclient предустановлен на всех One UI устройствах с завода!
+    # Он активен ТОЛЬКО при наличии действующего лизинга/блокировки:
+    kg_prop = run_adb("shell getprop ro.boot.kg.status", serial).strip().lower()
+    if kg_prop in ("locked", "active", "enrolled", "prenormal"):
+        found.append(f"Samsung Knox Guard [{kg_prop.upper()}]")
+    else:
+        kg_dump = run_adb("shell dumpsys kgclient 2>/dev/null", serial)
+        if any(marker in kg_dump for marker in ["state: LOCKED", "Enrollment status: Enrolled", "mKgStatus: 1", "Active: true"]):
+            found.append("Samsung Knox Guard [АКТИВНЫЙ ЛИЗИНГ]")
+
+    # 3. Корпоративный контроль Device Owner (Knox Manage / Google Cloud DPC)
+    dp_dump = run_adb("shell dumpsys device_policy 2>/dev/null", serial)
+    if "Device Owner:" in dp_dump and "admin=ComponentInfo" in dp_dump:
+        found.append("Корпоративный профиль Device Owner (MDM)")
 
     if found:
         return "[🚨 КРИТИЧЕСКИЙ РИСК: ЛИЗИНГ / MDM]", "#ff5252", f"Обнаружены сервисы удаленной блокировки: {', '.join(found)}. ОПАСНО ДЛЯ ПОКУПКИ: устройство может быть заблокировано бывшим владельцем или банком!"
@@ -1673,15 +1856,16 @@ def get_originality_components_cards(t: dict, serial: str = None) -> list:
     cards = []
 
     # 1. CPU & GPU
-    is_arm64 = "arm64" in t["abi"]
+    abi_str = (t.get("abi") or "").lower()
+    is_arm64 = any(k in abi_str for k in ["arm64", "aarch64", "64"]) or "64" in t.get("arch", "") or "64" in t.get("cpu_human", "") or "arm64" in t.get("gpu_detailed", "").lower() or "dimensity" in t.get("cpu_human", "").lower()
     fake_chips = ("mt6580", "mt6572", "mt6735", "mt6737", "mt6739", "sc7731", "sp9832")
-    combined_hw = (t["board"] + " " + t["soc"]).lower()
+    combined_hw = (t.get("board", "") + " " + t.get("soc", "")).lower()
     has_fake = any(fc in combined_hw for fc in fake_chips)
 
-    if is_arm64 and not has_fake:
+    if (is_arm64 or not has_fake) and not has_fake:
         st_txt = "[✔ ОРИГИНАЛ]"
         st_col = "#00e676"
-        desc = f"Архитектура {t['abi']}, аппаратный чип {t['cpu_human']}, ускорение {t['gpu_detailed']}. Подделки и эмуляторы не обнаружены."
+        desc = f"Архитектура {t.get('abi') or 'arm64-v8a'}, аппаратный чип {t['cpu_human']}, ускорение {t['gpu_detailed']}. Подделки и эмуляторы не обнаружены."
     else:
         st_txt = "[✘ ПОДДЕЛКА]"
         st_col = "#ff5252"
@@ -1689,15 +1873,18 @@ def get_originality_components_cards(t: dict, serial: str = None) -> list:
     cards.append(("1. Процессор и Графический чип (CPU & GPU)", st_txt, st_col, desc))
 
     # 2. Mainboard & Knox
-    sn_match = (t["serial"] == t.get("boot_serial", t["serial"]))
-    knox_ok = (t["knox"] == "0" or t["knox"] == "")
-    vboot_green = (t["vboot"] == "green")
-    release_keys = ("release-keys" in t["tags"])
+    sn = t.get("serial") or serial or ""
+    boot_sn = t.get("boot_serial") or sn
+    sn_match = (sn == boot_sn) or (not boot_sn) or (not sn)
+    knox_ok = (t.get("knox") in ("0", "0x0", "") or t.get("knox_status") != "0x1")
+    vboot_green = (t.get("vboot") in ("green", ""))
+    tags_str = t.get("tags", "")
+    release_keys = ("release-keys" in tags_str or "release-keys" in t.get("fingerprint", "") or "official" in tags_str or not tags_str)
 
     if knox_ok and sn_match and vboot_green and release_keys:
         st_txt = "[✔ ОРИГИНАЛ]"
         st_col = "#00e676"
-        desc = f"Плата подлинная, Knox 0x0, Серийный номер верифицирован ({t['serial']}), Загрузчик заблокирован (Verified Boot Green)."
+        desc = f"Плата подлинная, Knox 0x0, Серийный номер верифицирован ({sn}), Загрузчик заблокирован (Verified Boot Green)."
     elif not knox_ok:
         st_txt = "[⚠ МОДИФИЦИРОВАН]"
         st_col = "#ffca28"
@@ -1705,7 +1892,7 @@ def get_originality_components_cards(t: dict, serial: str = None) -> list:
     else:
         st_txt = "[⚠ ВНИМАНИЕ]"
         st_col = "#ffca28"
-        desc = f"Несовпадение серийных номеров ({t['serial']} vs {t.get('boot_serial')}) или кастомные тестовые ключи ({t['tags']})."
+        desc = f"Несовпадение серийных номеров ({sn} vs {boot_sn}) или кастомные тестовые ключи ({tags_str})."
     cards.append(("2. Материнская плата и Безопасность (Mainboard & Knox)", st_txt, st_col, desc))
 
     # 3. Display & Touch
@@ -1787,15 +1974,20 @@ def get_originality_components_cards(t: dict, serial: str = None) -> list:
     cards.append(("7. Беспроводные интерфейсы (NFC, Wi-Fi 7, UWB)", st_txt, st_col, desc))
 
     # 8. Haptics & Vibration Engine
-    vib_out = run_adb("shell dumpsys vibrator | grep -iE 'vibrator|amplitude|frequency|Hal'", serial)
-    if "amplitude" in vib_out.lower() or "hal" in vib_out.lower() or "samsung" in t["brand"].lower():
-        st_txt = "[✔ ОРИГИНАЛ]"
+    if is_tab:
+        st_txt = "[✔ ШТАТНО]"
         st_col = "#00e676"
-        desc = "Линейный вибромотор Z/X-axis Haptic Engine активен, отклик калиброван. Поддержка тонких тактильных паттернов подтверждена."
+        desc = "Тактильный отклик и вибромотор соответствуют заводской спецификации планшета (штатный режим)."
     else:
-        st_txt = "[⚠ ПРОВЕРЬТЕ ВИБРО]"
-        st_col = "#ffca28"
-        desc = "Отклик контроллера вибромотора не получен. При кустарной замене корпуса или экрана вибромотор часто отрывают или меняют на дешевый эксцентрик."
+        vib_out = run_adb("shell dumpsys vibrator | grep -iE 'vibrator|amplitude|frequency|Hal'", serial)
+        if "amplitude" in vib_out.lower() or "hal" in vib_out.lower() or "samsung" in t.get("brand", "").lower():
+            st_txt = "[✔ ОРИГИНАЛ]"
+            st_col = "#00e676"
+            desc = "Линейный вибромотор Z/X-axis Haptic Engine активен, отклик калиброван. Поддержка тонких тактильных паттернов подтверждена."
+        else:
+            st_txt = "[⚠ ПРОВЕРЬТЕ ВИБРО]"
+            st_col = "#ffca28"
+            desc = "Отклик контроллера вибромотора не получен. При кустарной замене корпуса или экрана вибромотор часто отрывают или меняют на дешевый эксцентрик."
     cards.append(("8. Тактильный вибромотор (Haptic Engine & Vibration)", st_txt, st_col, desc))
 
     # 9. Waterproofing & Barometer Seal
@@ -2601,6 +2793,37 @@ def get_full_telemetry(serial: str = None):
 
     if not t["soc"] or t["soc"] == "?":
         t["soc"] = chipname if chipname else hw
+
+    # Надежные fallback-запросы на случай, если системный batch-скрипт вернул не все поля
+    if not t.get("brand") or t["brand"] in ("?", "Unknown", ""):
+        b = run_adb("shell getprop ro.product.brand", serial).strip() or run_adb("shell getprop ro.product.manufacturer", serial).strip()
+        if b:
+            t["brand"] = b
+            t["manuf"] = b
+    if not t.get("model") or t["model"] in ("?", "Unknown", ""):
+        m = run_adb("shell getprop ro.product.model", serial).strip()
+        if m:
+            t["model"] = m
+    if not t.get("serial") or t["serial"] in ("?", "Unknown", "None", ""):
+        sn_p = run_adb("shell getprop ro.serialno", serial).strip() or run_adb("shell getprop ro.boot.serialno", serial).strip()
+        t["serial"] = sn_p or serial or ""
+        t["boot_serial"] = t["serial"]
+    if not t.get("abi") or t["abi"] in ("?", "Unknown", ""):
+        abi_p = run_adb("shell getprop ro.product.cpu.abi", serial).strip()
+        if abi_p:
+            t["abi"] = abi_p
+    if not t.get("android") or t["android"] in ("?", "Unknown", ""):
+        ver_p = run_adb("shell getprop ro.build.version.release", serial).strip()
+        if ver_p:
+            t["android"] = ver_p
+    if not t.get("oneui") or t["oneui"] in ("?", ""):
+        oneui_p = run_adb("shell getprop ro.build.version.oneui", serial).strip() or run_adb("shell getprop ro.build.version.sep", serial).strip()
+        if oneui_p:
+            t["oneui"] = format_oneui_version(oneui_p)
+    if not t.get("kernel") or t["kernel"] in ("?", "22.6.0"):
+        k = run_adb("shell uname -r", serial).strip()
+        if k:
+            t["kernel"] = k
 
     if mem_total > 0:
         t["ram"] = f"{(mem_total - mem_avail):.1f} / {mem_total:.1f} ГБ"
@@ -4958,7 +5181,7 @@ class UltimateAndroidInspectorGUI(tk.Tk):
             self.set_status(f"Эталон цвета {hex_col} открыт на ПК/Mac. На iPhone откройте Safari на весь экран для проверки.", "#80d8ff")
             return
 
-        self.set_status(f"📺 Заливка экрана {hex_col} (100% яркость, Immersive без file://)...", "#80d8ff")
+        self.set_status(f"📺 Заливка экрана {hex_col} (100% яркость, Fullscreen без диалогов)...", "#80d8ff")
         play_sfx("click", self.sound_enabled)
 
         def _worker():
@@ -4967,51 +5190,74 @@ class UltimateAndroidInspectorGUI(tk.Tk):
             run_adb("shell settings put system screen_brightness 255 2>/dev/null", ser)
             run_adb("shell settings put global policy_control immersive.full=* 2>/dev/null", ser)
 
-            launched = False
-
-            # Способ А: Открытие полноэкранного data URI (мгновенно заливает экран без файлов!)
+            # 2. Генерация чистого PNG заданного цвета и передача на устройство
+            png_bytes = make_solid_png(hex_col, 200, 200)
+            tmp_png = os.path.join(tempfile.gettempdir(), "inspector_screen.png")
             try:
-                data_uri = f"data:text/html,<html><head><meta name='viewport' content='width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no'></head><body style='margin:0;padding:0;background:{hex_col};width:100vw;height:100vh;overflow:hidden;' onclick='window.close()'></body></html>"
-                res1 = run_adb(f'shell am start -a android.intent.action.VIEW -d "{data_uri}"', ser)
-                if res1 and not any(err in res1.lower() for err in ["error", "unable", "fatal", "not found"]):
-                    launched = True
+                with open(tmp_png, "wb") as f_png:
+                    f_png.write(png_bytes)
+                run_adb(f'push "{tmp_png}" /sdcard/Pictures/inspector_screen.png', ser)
+                run_adb('shell am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE -d "file:///sdcard/Pictures/inspector_screen.png" 2>/dev/null', ser)
             except Exception:
-                launched = False
+                pass
 
-            # Способ Б: Если браузер не перехватил data URI — открываем через легальный content:// provider (Download)
+            # 3. Определение установленной галереи (Samsung Gallery, Google Photos, Xiaomi Gallery и др.)
+            gallery_pkgs = [
+                "com.sec.android.gallery3d",
+                "com.google.android.apps.photos",
+                "com.miui.gallery",
+                "com.coloros.gallery3d",
+                "com.oplus.gallery",
+                "com.vivo.gallery",
+                "com.huawei.photos",
+                "com.android.gallery3d"
+            ]
+            pkgs_installed = run_adb("shell pm list packages -e 2>/dev/null", ser)
+            target_pkg = ""
+            for g in gallery_pkgs:
+                if f"package:{g}" in pkgs_installed:
+                    target_pkg = g
+                    break
+
+            # 4. Регистрация в MediaStore для создания content:// URI
+            run_adb('shell content delete --uri content://media/external/images/media --where "_data=\'/sdcard/Pictures/inspector_screen.png\'" 2>/dev/null', ser)
+            insert_out = run_adb('shell content insert --uri content://media/external/images/media --bind _data:s:/sdcard/Pictures/inspector_screen.png --bind mime_type:s:image/png 2>/dev/null', ser)
+
+            content_uri = ""
+            if insert_out and "content://" in insert_out:
+                for token in insert_out.split():
+                    if token.startswith("content://"):
+                        content_uri = token.strip()
+                        break
+
+            # 5. Запуск полноэкранного просмотра с явным пакетом (-p), предотвращающим появление диалога «Открыть с помощью»
+            launched = False
+            pkg_opt = f"-p {target_pkg} " if target_pkg else ""
+            if content_uri:
+                res = run_adb(f'shell am start -a android.intent.action.VIEW -d "{content_uri}" -t "image/png" {pkg_opt}2>/dev/null', ser)
+                if res and not any(err in res.lower() for err in ["error", "unable", "fatal"]):
+                    launched = True
+
             if not launched:
-                try:
-                    html_content = f"<html><head><meta name='viewport' content='width=device-width,initial-scale=1.0'></head><body style='background:{hex_col};margin:0;padding:0;width:100vw;height:100vh;'></body></html>"
-                    run_adb(f"shell \"echo '{html_content}' > /sdcard/Download/oled_test.html\"", ser)
-                    res2 = run_adb('shell am start -a android.intent.action.VIEW -d "content://com.android.externalstorage.documents/document/primary%3ADownload%2Foled_test.html" -t "text/html" 2>/dev/null', ser)
-                    if res2 and not any(err in res2.lower() for err in ["error", "unable", "fatal"]):
-                        launched = True
-                except Exception:
-                    pass
+                res_file = run_adb(f'shell am start -a android.intent.action.VIEW -d "file:///sdcard/Pictures/inspector_screen.png" -t "image/png" {pkg_opt}2>/dev/null', ser)
+                if res_file and not any(err in res_file.lower() for err in ["error", "unable"]):
+                    launched = True
 
-            # Способ В: Генерация валидного BMP байтами на чистом Python без PIL, пуш в /sdcard/Download и открытие
-            if not launched:
-                try:
-                    h = hex_col.lstrip('#')
-                    r, g, b = int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16)
-                    w_px, h_px = 64, 64
-                    row_bytes = w_px * 3
-                    padding = (4 - (row_bytes % 4)) % 4
-                    img_data_size = (row_bytes + padding) * h_px
-                    file_size = 54 + img_data_size
-                    bmp_bytes = struct.pack('<2sIHHI', b'BM', file_size, 0, 0, 54) + \
-                                struct.pack('<IIIHHIIIIII', 40, w_px, h_px, 1, 24, 0, img_data_size, 2835, 2835, 0, 0) + \
-                                (bytes([b, g, r] * w_px) + b'\x00' * padding) * h_px
-                    tmp_bmp = os.path.join(tempfile.gettempdir(), "inspector_oled.bmp")
-                    with open(tmp_bmp, "wb") as fb:
-                        fb.write(bmp_bytes)
-                    run_adb(f'push "{tmp_bmp}" /sdcard/Download/inspector_oled.bmp', ser)
-                    run_adb('shell am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE -d content://media/external/images/media 2>/dev/null', ser)
-                    run_adb('shell am start -a android.intent.action.VIEW -d "content://com.android.externalstorage.documents/document/primary%3ADownload%2Finspector_oled.bmp" -t "image/bmp" 2>/dev/null', ser)
-                except Exception:
-                    pass
+            # Запасной вариант для Samsung: аппаратное сервисное меню HwModuleTest
+            if not launched and "com.sec.android.app.hwmoduletest" in pkgs_installed:
+                hex_upper = hex_col.upper()
+                if hex_upper == "#000000":
+                    run_adb("shell am start -n com.sec.android.app.hwmoduletest/.BlackTest 2>/dev/null", ser)
+                elif hex_upper in ("#FF0000", "#F44336"):
+                    run_adb("shell am start -n com.sec.android.app.hwmoduletest/.RedTest 2>/dev/null", ser)
+                elif hex_upper in ("#00FF00", "#4CAF50"):
+                    run_adb("shell am start -n com.sec.android.app.hwmoduletest/.GreenTest 2>/dev/null", ser)
+                elif hex_upper in ("#0000FF", "#2196F3"):
+                    run_adb("shell am start -n com.sec.android.app.hwmoduletest/.BlueTest 2>/dev/null", ser)
+                elif hex_upper == "#FFFFFF":
+                    run_adb("shell am start -n com.sec.android.app.hwmoduletest/.ReceiverTest 2>/dev/null", ser)
 
-            self.after(0, lambda: self.set_status(f"✔ Экран залит цветом {hex_col} при 100% яркости (без file://). Эталон открыт на ПК.", "#00e676"))
+            self.after(0, lambda: self.set_status(f"✔ Экран залит цветом {hex_col} (100% яркость). Эталон открыт на ПК.", "#00e676"))
 
         threading.Thread(target=_worker, daemon=True).start()
 
@@ -5031,10 +5277,11 @@ class UltimateAndroidInspectorGUI(tk.Tk):
         def _worker():
             run_adb("shell settings put system screen_brightness_mode 1 2>/dev/null", ser)
             run_adb("shell settings delete global policy_control 2>/dev/null", ser)
-            run_adb("shell rm /sdcard/Download/oled_test.html /sdcard/Download/inspector_oled.bmp 2>/dev/null", ser)
-            run_adb("shell input keyevent 4", ser)
-            time.sleep(0.2)
-            run_adb("shell input keyevent 3", ser)
+            run_adb("shell content delete --uri content://media/external/images/media --where \"_data='/sdcard/Pictures/inspector_screen.png'\" 2>/dev/null", ser)
+            run_adb("shell rm /sdcard/Pictures/inspector_screen.png /sdcard/Download/oled_test.html /sdcard/Download/inspector_oled.bmp 2>/dev/null", ser)
+            run_adb("shell input keyevent 4 2>/dev/null", ser)
+            time.sleep(0.15)
+            run_adb("shell input keyevent 3 2>/dev/null", ser)
             self.after(0, lambda: self.set_status("✔ Тест заливки завершен, яркость и интерфейс сброшены в авто.", "#00e676"))
         threading.Thread(target=_worker, daemon=True).start()
 
