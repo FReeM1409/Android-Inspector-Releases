@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Universal Mobile Inspector (Android & iOS) v6.2.2
+Universal Mobile Inspector (Android & iOS) v6.3.0
 Advanced Cyberpunk Hardware Telemetry, Deep Battery Diagnostic, Component Originality Verification,
 CyberGauge Canvas Radial Widgets, Network & IoT Security Audit, Dangerous Permissions Risk Scanner,
 Dual App Manager & Self-Updating System (Samsung / Xiaomi / POCO / OPPO / Vivo / Pixel / Apple iPhone).
@@ -314,12 +314,18 @@ def human_apple_color(color_code: str) -> str:
         return ""
     c_str = str(color_code).strip()
     c_map = {
+        "1": "Space Gray (Космический серый)",
+        "2": "Silver (Серебристый)",
+        "3": "Gold (Золотой)",
+        "4": "Midnight Green (Темно-зеленый)",
+        "5": "Product(RED) (Красный)",
+        "6": "Purple / Blue (Фиолетовый / Синий)",
         "#1": "Space Gray / Black (Черный / Темный космос)",
         "#2": "Silver / White (Серебристый / Белый)",
         "#3": "Gold / Starlight (Золотистый / Сияющая звезда)",
-        "#4": "Rose Gold / Pink (Розовый)",
+        "#4": "Midnight Green / Rose Gold (Темно-зеленый / Розовый)",
         "#5": "Product(RED) (Красный)",
-        "#6": "Blue (Синий)",
+        "#6": "Blue / Purple (Синий / Фиолетовый)",
         "black": "Black (Черный)",
         "white": "White (Белый)",
         "silver": "Silver (Серебристый)",
@@ -327,6 +333,7 @@ def human_apple_color(color_code: str) -> str:
         "space gray": "Space Gray (Космический серый)",
         "graphite": "Graphite (Графитовый)",
         "midnight": "Midnight (Темная ночь)",
+        "midnight green": "Midnight Green (Темно-зеленый)",
         "starlight": "Starlight (Сияющая звезда)",
         "blue": "Blue (Синий)",
         "pink": "Pink (Розовый)",
@@ -447,12 +454,17 @@ def decode_production_date(serial: str, brand: str = "", firstboot_str: str = ""
                 "H": (2012, 1), "J": (2012, 2), "K": (2013, 1), "L": (2013, 2),
                 "M": (2014, 1), "N": (2014, 2), "P": (2015, 1), "Q": (2015, 2),
                 "R": (2016, 1), "S": (2016, 2), "T": (2017, 1), "V": (2017, 2),
-                "W": (2018, 1), "X": (2018, 2), "Y": (2019, 1), "Z": (2019, 2),
-                "D": (2020, 1), "F": (2020, 2), "G": (2021, 1), "H": (2021, 2)
+                "W": (2018, 1), "X": (2018, 2), "Y": (2019, 1), "Z": (2019, 2)
             }
             if apple_y_char in apple_half_years:
-                ay, _ = apple_half_years[apple_y_char]
-                return f"{ay} г. (Apple Foxconn, SN: {apple_y_char}{apple_w_char})"
+                ay, half = apple_half_years[apple_y_char]
+                try:
+                    rel_year = int(APPLE_PRODUCT_MAP.get(m, ("", "", "", "2020"))[3])
+                except Exception:
+                    rel_year = 2020
+                if ay < rel_year:
+                    ay += 10
+                return f"{half}-е полугодие {ay} г. (Apple Foxconn, SN: {apple_y_char}{apple_w_char})"
 
         if apple_year:
             return f"Релиз {apple_year} г. (Apple Foxconn)"
@@ -536,7 +548,7 @@ CREATE_NO_WINDOW = 0x08000000 if os.name == 'nt' else 0
 # =====================================================================
 # КОНФИГУРАЦИЯ И АВТООБНОВЛЕНИЕ
 # =====================================================================
-APP_VERSION = "6.2.2"
+APP_VERSION = "6.3.0"
 APP_NAME = "Universal Mobile Inspector (Android & iOS)"
 GITHUB_OWNER = "FReeM1409"
 GITHUB_REPO = "Android-Inspector-Releases"
@@ -916,29 +928,59 @@ def ios_get_val(lockdown, name=None, domain=None):
     except Exception:
         return None
 
-def ios_get_ioregistry(diag, plane_or_name: str):
-    """Совместимое чтение ветки IORegistry для старых и новых версий DiagnosticsService."""
+def ios_read_ioreg(diag, name=None, plane=None, io_class=None):
+    """
+    Надежное чтение узла IORegistry из DiagnosticsService для любой версии pymobiledevice3:
+    1) ios_sync(diag.ioregistry(name=name, plane=plane, ioclass=io_class))
+    2) ios_sync(diag.ioregistry(name=name))
+    3) ios_sync(diag.get_ioregistry_entry(name))
+    """
     if not diag:
         return None
-    try:
-        if hasattr(diag, "ioregistry"):
-            res = ios_sync(diag.ioregistry(plane=plane_or_name))
-            if res: return res
-    except Exception:
-        pass
-    try:
-        if hasattr(diag, "ioregistry"):
-            res = ios_sync(diag.ioregistry(name=plane_or_name))
-            if res: return res
-    except Exception:
-        pass
-    try:
-        if hasattr(diag, "get_ioregistry_entry"):
-            res = ios_sync(diag.get_ioregistry_entry(plane_or_name))
-            if res: return res
-    except Exception:
-        pass
+
+    # 1. Вызов diag.ioregistry с переданными аргументами
+    if hasattr(diag, "ioregistry"):
+        kw_attempts = []
+        base = {}
+        if name: base["name"] = name
+        if plane: base["plane"] = plane
+        if io_class:
+            k1 = dict(base); k1["ioclass"] = io_class; kw_attempts.append(k1)
+            k2 = dict(base); k2["io_class"] = io_class; kw_attempts.append(k2)
+        if base:
+            kw_attempts.append(base)
+        if name:
+            kw_attempts.append({"name": name})
+        if plane:
+            kw_attempts.append({"plane": plane})
+        if io_class:
+            kw_attempts.append({"ioclass": io_class})
+            kw_attempts.append({"io_class": io_class})
+
+        for kw in kw_attempts:
+            try:
+                res = ios_sync(diag.ioregistry(**kw))
+                if res and isinstance(res, (dict, list)):
+                    return res
+            except Exception:
+                pass
+
+    # 2. Старый метод get_ioregistry_entry (pymobiledevice3 v2-v3)
+    if hasattr(diag, "get_ioregistry_entry"):
+        for target in (name, plane, io_class):
+            if target:
+                try:
+                    res = ios_sync(diag.get_ioregistry_entry(target))
+                    if res and isinstance(res, (dict, list)):
+                        return res
+                except Exception:
+                    pass
+
     return None
+
+def ios_get_ioregistry(diag, plane_or_name: str):
+    """Совместимое чтение ветки IORegistry для старых и новых версий DiagnosticsService."""
+    return ios_read_ioreg(diag, name=plane_or_name, plane=plane_or_name)
 
 # =====================================================================
 # ДВИЖОК ДИАГНОСТИКИ И ТЕЛЕМЕТРИИ ТЕХНИКИ APPLE (IPHONE / IPAD)
@@ -1262,6 +1304,12 @@ def get_full_ios_telemetry(udid: str) -> dict:
         all_vals = ios_get_all_values(lockdown)
 
         res["model"] = all_vals.get("ProductType") or ios_get_val(lockdown, "ProductType") or "iPhone"
+        prod_meta = APPLE_PRODUCT_MAP.get(res["model"], (res["model"], "Apple Silicon", "arm64e", "2024"))
+        pretty_name = prod_meta[0]
+        res["product_name"] = pretty_name
+        res["full_model_title"] = f"Apple {pretty_name} ({res['model']})"
+        default_nom = APPLE_NOMINAL_BATTERY.get(pretty_name, 3110)
+
         res["serial"] = all_vals.get("SerialNumber") or ios_get_val(lockdown, "SerialNumber") or "—"
         res["device"] = all_vals.get("DeviceName") or ios_get_val(lockdown, "DeviceName") or "iPhone"
         res["android"] = all_vals.get("ProductVersion") or ios_get_val(lockdown, "ProductVersion") or "17.0"
@@ -1277,7 +1325,7 @@ def get_full_ios_telemetry(udid: str) -> dict:
         if imei2: res["imei2"] = str(imei2)
 
         # -------------------------------------------------------------
-        # АНАЛИЗ ДИСПЛЕЯ (MOBILEGESTALT + IOREGISTRY + EEPROM)
+        # АНАЛИЗ ДИСПЛЕЯ И ОРИГИНАЛЬНОСТИ МАТРИЦЫ (iOS 15–18)
         # -------------------------------------------------------------
         diag = None
         if lockdown:
@@ -1306,27 +1354,53 @@ def get_full_ios_telemetry(udid: str) -> dict:
                     for sk in s_keys:
                         if sk.lower() == str(k).lower() and sk not in found_res:
                             found_res[sk] = v
-                    if "IORegistryEntryChildren" in obj and isinstance(obj["IORegistryEntryChildren"], list):
-                        for child in obj["IORegistryEntryChildren"]:
-                            found_res.update(_find_in_tree(child, s_keys))
+                    if isinstance(v, (dict, list)):
+                        nested = _find_in_tree(v, s_keys)
+                        for nk, nv in nested.items():
+                            if nk not in found_res:
+                                found_res[nk] = nv
             elif isinstance(obj, list):
                 for item in obj:
-                    found_res.update(_find_in_tree(item, s_keys))
+                    nested = _find_in_tree(item, s_keys)
+                    for nk, nv in nested.items():
+                        if nk not in found_res:
+                            found_res[nk] = nv
             return found_res
 
-        search_keys = ["PanelSerialNumber", "LCM-Serial", "MtSn", "alpm-supported", "CalibrationData", "als-enabled"]
-        ioreg_findings = {}
+        # Опрос дерева дисплея, тачскрина и датчиков через рабочий ios_read_ioreg
+        clcd = None
+        mt_dev = None
+        als_dev = None
         if diag:
-            for plane in ("AppleCLCD2", "IOMobileFramebuffer", "AppleMultiTouchDevice"):
-                try:
-                    entry = ios_get_ioregistry(diag, plane)
-                    if entry:
-                        res_plane = _find_in_tree(entry, search_keys)
-                        for k, v in res_plane.items():
-                            if k not in ioreg_findings:
-                                ioreg_findings[k] = v
-                except Exception:
-                    pass
+            clcd = (
+                ios_read_ioreg(diag, name="AppleCLCD2") or
+                ios_read_ioreg(diag, name="IOMobileFramebufferAP") or
+                ios_read_ioreg(diag, plane="AppleCLCD2")
+            )
+            mt_dev = (
+                ios_read_ioreg(diag, name="AppleMultiTouchDevice") or
+                ios_read_ioreg(diag, io_class="AppleMultiTouchDevice") or
+                ios_read_ioreg(diag, plane="AppleMultiTouchDevice")
+            )
+            als_dev = (
+                ios_read_ioreg(diag, name="als") or
+                ios_read_ioreg(diag, name="AppleBiometricSensor") or
+                ios_read_ioreg(diag, plane="AppleBiometricSensor")
+            )
+
+        search_screen_keys = [
+            "PanelSerialNumber", "RawPanelSerialNumber", "LCM-Serial", "MtSn",
+            "CoverglassSerialNumber", "DisplaySerialNumber", "bcfg", "CalibrationData",
+            "alpm-supported", "als-enabled"
+        ]
+
+        ioreg_findings = {}
+        for node in (clcd, mt_dev, als_dev):
+            if node:
+                found_node = _find_in_tree(node, search_screen_keys)
+                for k, v in found_node.items():
+                    if k not in ioreg_findings:
+                        ioreg_findings[k] = v
 
         panel_sn = (
             mg_vals.get("RawPanelSerialNumber") or
@@ -1343,53 +1417,150 @@ def get_full_ios_telemetry(udid: str) -> dict:
             all_vals.get("CoverglassSerialNumber")
         )
         is_screen_replaced = False
+        is_screen_suspect = False
         screen_fail_reason = ""
 
-        # Проверка 1: Серийник матрицы отсутствует, сброшен в нули или шаблон
+        panel_sn_str = str(panel_sn).strip() if panel_sn else ""
         if panel_sn is not None:
-            panel_sn_str = str(panel_sn).strip()
             if not panel_sn_str or panel_sn_str in ("00000000", "FFFFFFFF", "0", "None") or len(panel_sn_str) < 6:
                 is_screen_replaced = True
                 screen_fail_reason = "Серийный номер тачскрина сброшен в нули или отсутствует в EEPROM матрицы."
 
-        # Проверка 2: IORegistry ветка дисплейного контроллера (alpm-supported / als)
-        if "alpm-supported" in ioreg_findings and ioreg_findings["alpm-supported"] is False:
-            is_screen_replaced = True
-            screen_fail_reason = "Отсутствует датчик внешней освещенности ALS и профиль TrueTone."
+        # Проверка калибровок и датчиков освещенности при наличии дерева дисплея
+        if not is_screen_replaced and clcd:
+            has_calib = "CalibrationData" in ioreg_findings or "bcfg" in ioreg_findings
+            alpm_ok = ioreg_findings.get("alpm-supported", True) is not False
+            if not has_calib and not als_dev:
+                is_screen_suspect = True
+                screen_fail_reason = "Отсутствуют калибровочные данные EEPROM матрицы и датчик ALS."
+            elif not alpm_ok:
+                is_screen_suspect = True
+                screen_fail_reason = "Отключен профиль адаптивной яркости True Tone (alpm-supported: false)."
 
         # -------------------------------------------------------------
         # ДИАГНОСТИКА АККУМУЛЯТОРА ЧЕРЕЗ AppleSmartBattery
         # -------------------------------------------------------------
-        cycles = 185
-        design_cap = 4422
-        max_cap = 4200
-        soh = 95.0
-        is_jcid_fraud = False
-
+        batt_reg = None
         if diag:
+            batt_reg = (
+                ios_read_ioreg(diag, name="AppleSmartBattery") or
+                ios_read_ioreg(diag, io_class="IOPMPowerSource") or
+                ios_read_ioreg(diag, plane="AppleSmartBattery")
+            )
+
+        batt_keys = [
+            "CycleCount", "DesignCapacity", "NominalChargeCapacity", "AppleRawMaxCapacity",
+            "AppleRawCurrentCapacity", "CurrentCapacity", "Voltage", "Temperature",
+            "Serial", "BatterySerialNumber", "SerialNum", "BatteryData", "MaxCapacity",
+            "AtCriticalLevel", "ExternalConnected", "IsCharging"
+        ]
+        batt_data = _find_in_tree(batt_reg, batt_keys) if batt_reg else {}
+
+        # Также проверяем BatteryData если вернулся как вложенный словарь
+        b_data_raw = batt_data.get("BatteryData")
+        if isinstance(b_data_raw, dict):
+            b_nested = _find_in_tree(b_data_raw, batt_keys)
+            for k, v in b_nested.items():
+                if k not in batt_data:
+                    batt_data[k] = v
+
+        cycles_val = batt_data.get("CycleCount")
+        if cycles_val is not None:
+            try: cycles = int(cycles_val)
+            except Exception: cycles = 185
+        else:
+            cycles = 185
+
+        design_cap_val = batt_data.get("DesignCapacity")
+        if design_cap_val and int(design_cap_val) > 0:
+            try: design_cap = int(design_cap_val)
+            except Exception: design_cap = default_nom
+        else:
+            design_cap = default_nom
+
+        max_cap_val = (
+            batt_data.get("NominalChargeCapacity") or
+            batt_data.get("AppleRawMaxCapacity") or
+            batt_data.get("MaxCapacity") or
+            design_cap
+        )
+        try: max_cap = int(max_cap_val)
+        except Exception: max_cap = design_cap
+
+        soh = round((max_cap / float(design_cap)) * 100.0, 1) if design_cap > 0 else 95.0
+        soh = max(30.0, min(105.0, soh))
+
+        # Реальный вольтаж (мВ)
+        volt_raw = batt_data.get("Voltage")
+        voltage_mv = 3850
+        if volt_raw:
+            try: voltage_mv = int(volt_raw)
+            except Exception: voltage_mv = 3850
+
+        # Реальная температура (°C)
+        temp_raw = batt_data.get("Temperature")
+        temp_c = 25.0
+        if temp_raw:
             try:
-                io_reg = ios_get_ioregistry(diag, "AppleSmartBattery")
-                if io_reg and isinstance(io_reg, dict):
-                    batt_info = io_reg.get("IORegistryEntryChildren", [{}])[0]
-                    cycles = batt_info.get("CycleCount", cycles)
-                    design_cap = batt_info.get("DesignCapacity", design_cap)
-                    max_cap = batt_info.get("NominalChargeCapacity") or batt_info.get("AppleRawMaxCapacity") or design_cap
-                    
-                    soh = round((max_cap / float(design_cap)) * 100.0, 1) if design_cap > 0 else 95.0
-                    soh = max(30.0, min(105.0, soh))
-
-                    res["batt_diag"]["cycles"] = str(cycles)
-                    res["batt_diag"]["design_mah"] = int(design_cap)
-                    res["batt_diag"]["est_full_mah"] = int(max_cap)
-                    res["batt_diag"]["soh_pct"] = soh
-                    res["batt_diag"]["wear_pct"] = round(100.0 - soh, 1)
-
-                    if cycles > 400 and soh >= 99.0:
-                        is_jcid_fraud = True
-                        res["batt_diag"]["recommendation"] = f"⚠ ВНИМАНИЕ: Зафиксировано {cycles} циклов заряда, но SOH отображает 100%. Возможна перепаковка аккумулятора программатором (JCID/iCopy)."
-                        res["batt_diag"]["rec_level"] = "yellow"
+                t_val = float(temp_raw)
+                if t_val > 1000:
+                    temp_c = round(t_val / 100.0, 1)
+                elif t_val > 100:
+                    temp_c = round(t_val / 10.0, 1)
+                else:
+                    temp_c = round(t_val, 1)
             except Exception:
-                pass
+                temp_c = 25.0
+
+        # Заводской серийный номер чипа BMS аккумулятора
+        batt_sn = (
+            batt_data.get("Serial") or
+            batt_data.get("BatterySerialNumber") or
+            batt_data.get("SerialNum") or
+            ""
+        )
+        if isinstance(batt_sn, (bytes, bytearray)):
+            try: batt_sn = batt_sn.decode("utf-8", "ignore").strip()
+            except Exception: batt_sn = batt_sn.hex()
+        else:
+            batt_sn = str(batt_sn).strip() if batt_sn else ""
+
+        # Проверка оригинальности АКБ
+        is_batt_fake = False
+        is_jcid_fraud = False
+        is_batt_worn = False
+
+        if not batt_sn or batt_sn in ("00000000", "0", "None") or len(batt_sn) < 10:
+            is_batt_fake = True
+        elif cycles > 450 and soh >= 99.0:
+            is_jcid_fraud = True
+        elif soh < 80.0 or cycles > 600:
+            is_batt_worn = True
+
+        batt_sn_display = batt_sn if (batt_sn and len(batt_sn) >= 6) else "Не спарен / отсутствует"
+
+        res["batt_diag"]["cycles"] = str(cycles)
+        res["batt_diag"]["design_mah"] = int(design_cap)
+        res["batt_diag"]["est_full_mah"] = int(max_cap)
+        res["batt_diag"]["curr_charge_mah"] = int(max_cap)
+        res["batt_diag"]["soh_pct"] = soh
+        res["batt_diag"]["wear_pct"] = round(100.0 - soh, 1)
+        res["batt_diag"]["voltage_mv"] = voltage_mv
+        res["batt_diag"]["temp_c"] = temp_c
+        res["batt_diag"]["fuel_gauge_ok"] = not is_batt_fake
+
+        if is_batt_fake:
+            res["batt_diag"]["recommendation"] = f"✘ ВНИМАНИЕ: Неоригинальный аккумулятор. Серийный номер BMS ({batt_sn_display}) отсутствует или поврежден."
+            res["batt_diag"]["rec_level"] = "red"
+        elif is_jcid_fraud:
+            res["batt_diag"]["recommendation"] = f"⚠ ВНИМАНИЕ: Зафиксировано {cycles} циклов заряда, но SOH отображает 100%. Возможна перепаковка программатором (JCID/iCopy)."
+            res["batt_diag"]["rec_level"] = "yellow"
+        elif is_batt_worn:
+            res["batt_diag"]["recommendation"] = f"⚠ ВНИМАНИЕ: Высокий износ АКБ ({cycles} циклов, SOH {soh}%). Рекомендуется плановая замена."
+            res["batt_diag"]["rec_level"] = "yellow"
+        else:
+            res["batt_diag"]["recommendation"] = f"🟢 АКБ в хорошем состоянии ({cycles} циклов, SOH {soh}%). Родной контроллер Apple."
+            res["batt_diag"]["rec_level"] = "green"
 
         # -------------------------------------------------------------
         # ДИАГНОСТИКА FACE ID И СЕНСОРОВ
@@ -1397,7 +1568,7 @@ def get_full_ios_telemetry(udid: str) -> dict:
         faceid_ok = True
         try:
             if diag:
-                bio_reg = ios_get_ioregistry(diag, "AppleBiometricSensor")
+                bio_reg = ios_read_ioreg(diag, name="AppleBiometricSensor") or ios_read_ioreg(diag, plane="AppleBiometricSensor")
                 if not bio_reg:
                     # Проверяем также через Lockdown
                     bio_state = all_vals.get("PasswordProtected") or ios_get_val(lockdown, "PasswordProtected")
@@ -1411,20 +1582,28 @@ def get_full_ios_telemetry(udid: str) -> dict:
         # -------------------------------------------------------------
         trust_score = 98
         if is_screen_replaced: trust_score -= 30
-        if is_jcid_fraud: trust_score -= 20
+        elif is_screen_suspect: trust_score -= 15
+        if is_batt_fake: trust_score -= 20
+        elif is_jcid_fraud: trust_score -= 15
+        elif is_batt_worn: trust_score -= 10
         if not faceid_ok: trust_score -= 25
-        if soh < 80.0: trust_score -= 10
         trust_score = max(20, min(100, trust_score))
 
         # Карточка экрана
+        p_sn_disp = panel_sn_str or "Заводской (Спарен с Logic Board)"
         if is_screen_replaced:
             card_screen = (
                 "7. Дисплейный модуль (TrueTone & Touch)",
                 "[✘ НЕОРИГИНАЛЬНЫЙ ЭКРАН / ЗАМЕНА]", "#ff5252",
                 f"ВНИМАНИЕ! Дисплей заменен на стороннюю копию (In-Cell/OLED) без калибровки EEPROM!\nПричина: {screen_fail_reason or 'Серийный номер матрицы не спарен с Secure Enclave'}. Функция True Tone заблокирована."
             )
+        elif is_screen_suspect:
+            card_screen = (
+                "7. Дисплейный модуль (TrueTone & Touch)",
+                "[⚠ ПОДОЗРЕНИЕ НА ЗАМЕНУ ЭКРАНА (Проверьте True Tone в шторке)]", "#ffca28",
+                f"Серийный номер матрицы: {p_sn_disp}.\nПредупреждение: {screen_fail_reason}. Проверьте наличие функции True Tone и работу автояркости."
+            )
         else:
-            p_sn_disp = panel_sn or "Заводской (Спарен с Logic Board)"
             card_screen = (
                 "7. Дисплейный модуль (TrueTone & Touch)",
                 "[✔ ОРИГИНАЛ (Apple OLED)]", "#00e676",
@@ -1432,12 +1611,35 @@ def get_full_ios_telemetry(udid: str) -> dict:
             )
 
         # Карточка АКБ
-        if is_jcid_fraud:
-            card_batt = ("5. Аккумулятор AppleSmartBattery", "[⚠ НАКРУТКА JCID]", "#ffca28", f"Циклов: {cycles}, Здоровье: {soh}%. Зафиксировано свыше 400 циклов, но отображается 100% — перепакован чипом JCID/iCopy.")
-        elif soh < 80.0:
-            card_batt = ("5. Аккумулятор AppleSmartBattery", "[⚠ ИЗНОС АКБ (<80%)]", "#ff5252", f"Циклов: {cycles}, Здоровье: {soh}%. Критический износ аккумулятора, рекомендуется сервисная замена.")
+        batt_desc_base = f"Циклов: {cycles}, Здоровье: {soh}% (Емкость: {max_cap}/{design_cap} мАч, {voltage_mv} мВ, {temp_c}°C). Серийный номер АКБ: {batt_sn_display}."
+        if is_batt_fake:
+            card_batt = (
+                "5. Аккумулятор AppleSmartBattery",
+                "[✘ НЕОРИГИНАЛЬНЫЙ АКБ / ЗАМЕНЕН]",
+                "#ff5252",
+                f"{batt_desc_base}\nВНИМАНИЕ: Серийный номер чипа BMS отсутствует или сбит! Установлен сторонний аккумулятор без заводской привязки к Logic Board."
+            )
+        elif is_jcid_fraud:
+            card_batt = (
+                "5. Аккумулятор AppleSmartBattery",
+                "[⚠ СБРОШЕН ПРОГРАММАТОРОМ JCID]",
+                "#ffca28",
+                f"{batt_desc_base}\nЗафиксировано {cycles} циклов заряда при здоровье 100% — накручен чипом JCID/iCopy."
+            )
+        elif is_batt_worn:
+            card_batt = (
+                "5. Аккумулятор AppleSmartBattery",
+                "[⚠ ТРЕБУЕТСЯ СЕРВИСНАЯ ЗАМЕНА АКБ (Износ)]",
+                "#ffca28",
+                f"{batt_desc_base}\nКритический износ аккумулятора (<80% или >600 циклов), рекомендуется сервисная замена."
+            )
         else:
-            card_batt = ("5. Аккумулятор AppleSmartBattery", "[✔ ОРИГИНАЛ]", "#00e676", f"Циклов: {cycles}, Здоровье: {soh}%. Чтение напрямую из цифрового контроллера IORegistry.")
+            card_batt = (
+                "5. Аккумулятор AppleSmartBattery",
+                "[✔ ОРИГИНАЛ]",
+                "#00e676",
+                f"{batt_desc_base}\nЧтение напрямую из цифрового контроллера IORegistry. Родной чип BMS Apple."
+            )
 
         # Карточка Face ID
         card_faceid = (
@@ -1504,18 +1706,18 @@ def get_full_ios_telemetry(udid: str) -> dict:
 
         if is_screen_replaced:
             res["verdict_short"] = "ВНИМАНИЕ: НЕОРИГИНАЛЬНЫЙ ЭКРАН (Замена дисплея)"
+        elif is_batt_fake:
+            res["verdict_short"] = "ВНИМАНИЕ: НЕОРИГИНАЛЬНЫЙ АКБ (Подделка/Замена)"
         elif is_jcid_fraud:
             res["verdict_short"] = "ВНИМАНИЕ: НАКРУЧЕН АКБ (Сброшен программатором)"
+        elif is_screen_suspect:
+            res["verdict_short"] = "ПОДОЗРЕНИЕ НА ЗАМЕНУ ЭКРАНА (Проверьте True Tone)"
         elif trust_score >= 90:
             res["verdict_short"] = "100% APPLE ORIGINAL (iOS Verified)"
         else:
             res["verdict_short"] = "ТРЕБУЕТ ВНИМАНИЯ (Проверьте отчет)"
         res["trust_score"] = trust_score
 
-        prod_meta = APPLE_PRODUCT_MAP.get(res["model"], (res["model"], "Apple Silicon", "arm64e", "2024"))
-        pretty_name = prod_meta[0]
-        res["product_name"] = pretty_name
-        res["full_model_title"] = f"Apple {pretty_name} ({res['model']})"
         res["ios_version"] = res["android"]
         res["cpu_human"] = prod_meta[1]
         res["gpu_clean"] = f"{prod_meta[1]} GPU"
@@ -1523,7 +1725,7 @@ def get_full_ios_telemetry(udid: str) -> dict:
         res["csc"] = res["region"]
         res["country"] = "США" if "LL" in res["region"] else ("Россия" if "RU" in res["region"] else "Международный")
         res["operator"] = "Neverlock (SIM Free)"
-        res["ram"] = "8 GB" if any(x in pretty_name for x in ["15 Pro", "16", "M1", "M2", "M4"]) else ("6 GB" if any(x in pretty_name for x in ["13 Pro", "14"]) else "4 GB")
+        res["ram"] = "8 GB" if any(x in pretty_name for x in ["15 Pro", "16", "17", "M1", "M2", "M4"]) else ("6 GB" if any(x in pretty_name for x in ["13 Pro", "14"]) else "4 GB")
         res["production_date"] = decode_production_date(res.get("serial", ""), "Apple", model=res.get("model", ""))
         res["poh_hours"] = "Штатный пробег (Apple NVMe)"
         res["widevine_level"] = "Apple FairPlay DRM (Hardware Enclave)"
