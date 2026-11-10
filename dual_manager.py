@@ -1090,25 +1090,28 @@ def check_ufs_storage_health(serial: str = None) -> tuple:
         return "[✔ В НОРМЕ]", "#00e676", "Штатный контроллер накопителя UFS функционирует стабильно. Деградации скорости чтения/записи не обнаружено."
 
 def check_kernel_panic_and_reboots(serial: str = None) -> tuple:
-    """Карточка №14: 💥 Криминалистика внезапных выключений и отвала чипа (Kernel Panic & Reboot Forensics)."""
+    """Карточка №14: Криминалистика внезапных выключений ядра (Kernel Panic & Reboot Forensics)."""
     reason1 = run_adb("shell getprop sys.boot.reason", serial).strip().lower()
     reason2 = run_adb("shell getprop persist.sys.boot.reason", serial).strip().lower()
     last_boot = run_adb("shell getprop ro.boot.bootreason", serial).strip().lower()
-    reasons = f"{reason1} {reason2} {last_boot}"
+    reasons_combined = f"{reason1} {reason2} {last_boot}"
 
-    panic_words = ["kernel_panic", "panic", "watchdog", "thermal_shutdown", "hw_reset", "oops", "crash", "modem_crash"]
-    has_panic = any(w in reasons for w in panic_words)
+    # Обычные, абсолютно штатные причины перезагрузок устройства
+    normal_reasons = (
+        "userrequested", "powerkey", "reboot", "cold", "warm", "normal",
+        "power_on", "charger", "ota", "recovery", "quiescent", "shell", "longkey"
+    )
 
-    dropbox_out = run_adb("shell 'dumpsys dropbox --print | grep -iE \"SYSTEM_RESTART|apanic|SYSTEM_TOMBSTONE|watchdog\" | tail -n 5'", serial).strip()
+    # Реальные аппаратные паники ядра
+    if "thermal_shutdown" in reasons_combined or "thermal" in reason1:
+        return "[⚠ ТЕПЛОВОЕ ВЫКЛЮЧЕНИЕ]", "#ffca28", f"Зафиксировано защитное отключение устройства по перегреву (Thermal Shutdown: {reason1}). Рекомендуется проверить термоинтерфейс и условия эксплуатации."
 
-    if has_panic or "apanic" in dropbox_out.lower() or "watchdog" in dropbox_out.lower():
-        crit_cause = [w for w in panic_words if w in reasons]
-        cause_str = ", ".join(crit_cause) if crit_cause else "kernel_panic / watchdog"
-        return "[⚠ ВНИМАНИЕ: СБОЙ ПИТАНИЯ / ОТВАЛ]", "#ff5252", f"Обнаружены следы аварийных перезагрузок ядра ({cause_str})! Возможен термический отвал BGA-пайки процессора/памяти или неисправность цепей питания PMIC."
-    elif dropbox_out:
-        return "[⚠ ЕДИНИЧНЫЕ ПЕРЕЗАГРУЗКИ]", "#ffca28", "В системном логе DropBox зафиксированы перезагрузки служб, однако критических аппаратных паник ядра (Kernel Panic) не выявлено."
-    else:
-        return "[✔ СТАБИЛЬНО]", "#00e676", f"Аварийных сбоев ядра, Watchdog и Kernel Panic не обнаружено. Причина последней загрузки: {reason1 or 'reboot (обычный запуск)'}. Пайка SoC и питание в норме."
+    if any(k in reason1 for k in ["kernel_panic", "oops", "subsystem_restart:modem"]):
+        return "[⚠ СБОЙ ЯДРА]", "#ff5252", f"Текущая перезагрузка вызвана паникой ядра Linux (Kernel Panic: {reason1}). Если сбои повторяются регулярно — возможен конфликт кастомных модулей или сбой питания."
+
+    # Если последняя загрузка штатная, но в DropBox есть записи от старых падений приложений
+    display_reason = reason1 or last_boot or "reboot (штатный запуск)"
+    return "[✔ СТАБИЛЬНО]", "#00e676", f"Аварийных сбоев ядра (Kernel Panic) не обнаружено. Причина последней загрузки: {display_reason}. Аппаратная платформа и цепи питания стабильны."
 
 def generate_water_eject_wav(filepath: str, duration_sec: float = 6.0, freq: float = 165.0):
     """Генерирует 6-секундный аудиофайл 165 Гц с амплитудной пульсацией для выталкивания воды из динамиков."""
@@ -5141,24 +5144,29 @@ class UltimateAndroidInspectorGUI(tk.Tk):
                 self._ref_win.destroy()
             ref = tk.Toplevel(self)
             self._ref_win = ref
-            ref.title(f"Эталон оттенка: {hex_col}")
-            ref.geometry("420x260+60+60")
+            ref.title(f"Эталон: {hex_col}")
+            # Позиционируем аккуратно в правом верхнем углу, чтобы не загораживать кнопки
+            try:
+                rx = max(20, self.winfo_x() + self.winfo_width() - 440)
+                ry = max(40, self.winfo_y() + 60)
+                ref.geometry(f"400x230+{rx}+{ry}")
+            except Exception:
+                ref.geometry("400x230+80+80")
             ref.configure(bg=hex_col)
-            ref.attributes("-topmost", True)
 
             is_light = hex_col.upper() in ["#FFFFFF", "#00FF00", "#FFCA28", "#80D8FF"]
             fg_col = "#000000" if is_light else "#ffffff"
-            box = tk.Frame(ref, bg=hex_col, padx=16, pady=16)
+            box = tk.Frame(ref, bg=hex_col, padx=14, pady=12)
             box.pack(expand=True, fill=tk.BOTH)
 
             tk.Label(
-                box, text=f"ЭТАЛОН ОТТЕНКА: {hex_col}",
-                font=("Segoe UI", 13, "bold"), bg=hex_col, fg=fg_col
-            ).pack(pady=(10, 4))
+                box, text=f"ЭТАЛОН ЦВЕТА: {hex_col}",
+                font=("Segoe UI", 12, "bold"), bg=hex_col, fg=fg_col
+            ).pack(pady=(6, 2))
             tk.Label(
-                box, text="Сравните этот эталонный оттенок с экраном телефона на 100% яркости.\nИщите пятна, желтизну, тени клавиатуры или выгорание AMOLED.",
+                box, text="Сравните оттенок с экраном телефона на 100% яркости.\nИщите пятна, желтизну, тени клавиатуры или выгорание AMOLED.",
                 font=("Segoe UI", 9), bg=hex_col, fg=fg_col, justify="center"
-            ).pack(pady=(0, 14))
+            ).pack(pady=(0, 10))
             tk.Button(
                 box, text="✕ Закрыть эталон", font=("Segoe UI", 9, "bold"),
                 bg="#1a1a2b" if is_light else "#ffffff",
@@ -5170,7 +5178,7 @@ class UltimateAndroidInspectorGUI(tk.Tk):
             pass
 
     def test_burnin_color(self, hex_col):
-        # Показываем эталонное окно на ПК/MacBook для сверки оттенка
+        # Показываем компактное эталонное окно на ПК/MacBook
         self._show_reference_color_window(hex_col)
 
         ser = self.current_serial
@@ -5181,17 +5189,54 @@ class UltimateAndroidInspectorGUI(tk.Tk):
             self.set_status(f"Эталон цвета {hex_col} открыт на ПК/Mac. На iPhone откройте Safari на весь экран для проверки.", "#80d8ff")
             return
 
-        self.set_status(f"📺 Заливка экрана {hex_col} (100% яркость, Fullscreen без диалогов)...", "#80d8ff")
+        self.set_status(f"📺 Заливка экрана {hex_col} (100% яркость, Настоящий Fullscreen)...", "#80d8ff")
         play_sfx("click", self.sound_enabled)
 
         def _worker():
-            # 1. 100% яркость и принудительный immersive-режим
+            # 1. 100% максимальная яркость и полное скрытие статус-бара / навигации (Immersive)
             run_adb("shell settings put system screen_brightness_mode 0 2>/dev/null", ser)
             run_adb("shell settings put system screen_brightness 255 2>/dev/null", ser)
             run_adb("shell settings put global policy_control immersive.full=* 2>/dev/null", ser)
 
-            # 2. Генерация чистого PNG заданного цвета и передача на устройство
-            png_bytes = make_solid_png(hex_col, 200, 200)
+            hex_upper = hex_col.upper()
+            pkgs_installed = run_adb("shell pm list packages -e 2>/dev/null", ser)
+            has_samsung_hw = "com.sec.android.app.hwmoduletest" in pkgs_installed
+
+            # 2. ПРИОРИТЕТ 1 ДЛЯ SAMSUNG: Фирменные заводские аппаратные полноэкранные тесты (HwModuleTest)
+            # Они заполняют ровно 100% дисплея без панелей, статусов и рамок
+            samsung_launched = False
+            if has_samsung_hw:
+                if hex_upper == "#FFFFFF":
+                    res = run_adb("shell am start -n com.sec.android.app.hwmoduletest/.ReceiverTest 2>/dev/null", ser)
+                    if "Error" not in res: samsung_launched = True
+                elif hex_upper == "#000000":
+                    res = run_adb("shell am start -n com.sec.android.app.hwmoduletest/.BlackTest 2>/dev/null", ser)
+                    if "Error" not in res: samsung_launched = True
+                elif hex_upper in ("#FF0000", "#F44336"):
+                    res = run_adb("shell am start -n com.sec.android.app.hwmoduletest/.RedTest 2>/dev/null", ser)
+                    if "Error" not in res: samsung_launched = True
+                elif hex_upper in ("#00FF00", "#4CAF50"):
+                    res = run_adb("shell am start -n com.sec.android.app.hwmoduletest/.GreenTest 2>/dev/null", ser)
+                    if "Error" not in res: samsung_launched = True
+                elif hex_upper in ("#0000FF", "#2196F3"):
+                    res = run_adb("shell am start -n com.sec.android.app.hwmoduletest/.BlueTest 2>/dev/null", ser)
+                    if "Error" not in res: samsung_launched = True
+
+            if samsung_launched:
+                self.after(0, lambda: self.set_status(f"✔ Аппаратный Fullscreen-тест Samsung запущен ({hex_col}). Нажмите кнопку «Закрыть тест» для выхода.", "#00e676"))
+                return
+
+            # 3. ДЛЯ СЕРОГО ЦВЕТА ИЛИ ДРУГИХ БРЕНДОВ: Генерация PNG в нативном соотношении сторон экрана
+            scr_w, scr_h = 1080, 2400
+            wm_res = run_adb("shell wm size", ser)
+            m_sz = re.search(r"(\d+)\s*x\s*(\d+)", wm_res)
+            if m_sz:
+                scr_w, scr_h = int(m_sz.group(1)), int(m_sz.group(2))
+
+            # Генерируем изображение в пропорциях экрана (300 x пропорциональная высота) для мгновенной передачи
+            png_w = 400
+            png_h = max(400, int(png_w * (scr_h / max(1, scr_w))))
+            png_bytes = make_solid_png(hex_col, png_w, png_h)
             tmp_png = os.path.join(tempfile.gettempdir(), "inspector_screen.png")
             try:
                 with open(tmp_png, "wb") as f_png:
@@ -5201,7 +5246,7 @@ class UltimateAndroidInspectorGUI(tk.Tk):
             except Exception:
                 pass
 
-            # 3. Определение установленной галереи (Samsung Gallery, Google Photos, Xiaomi Gallery и др.)
+            # Определение пакета системной галереи
             gallery_pkgs = [
                 "com.sec.android.gallery3d",
                 "com.google.android.apps.photos",
@@ -5212,14 +5257,13 @@ class UltimateAndroidInspectorGUI(tk.Tk):
                 "com.huawei.photos",
                 "com.android.gallery3d"
             ]
-            pkgs_installed = run_adb("shell pm list packages -e 2>/dev/null", ser)
             target_pkg = ""
             for g in gallery_pkgs:
                 if f"package:{g}" in pkgs_installed:
                     target_pkg = g
                     break
 
-            # 4. Регистрация в MediaStore для создания content:// URI
+            # Создаем или обновляем запись в MediaStore
             run_adb('shell content delete --uri content://media/external/images/media --where "_data=\'/sdcard/Pictures/inspector_screen.png\'" 2>/dev/null', ser)
             insert_out = run_adb('shell content insert --uri content://media/external/images/media --bind _data:s:/sdcard/Pictures/inspector_screen.png --bind mime_type:s:image/png 2>/dev/null', ser)
 
@@ -5230,34 +5274,17 @@ class UltimateAndroidInspectorGUI(tk.Tk):
                         content_uri = token.strip()
                         break
 
-            # 5. Запуск полноэкранного просмотра с явным пакетом (-p), предотвращающим появление диалога «Открыть с помощью»
-            launched = False
             pkg_opt = f"-p {target_pkg} " if target_pkg else ""
             if content_uri:
-                res = run_adb(f'shell am start -a android.intent.action.VIEW -d "{content_uri}" -t "image/png" {pkg_opt}2>/dev/null', ser)
-                if res and not any(err in res.lower() for err in ["error", "unable", "fatal"]):
-                    launched = True
+                run_adb(f'shell am start -a android.intent.action.VIEW -d "{content_uri}" -t "image/png" {pkg_opt}2>/dev/null', ser)
+            else:
+                run_adb(f'shell am start -a android.intent.action.VIEW -d "file:///sdcard/Pictures/inspector_screen.png" -t "image/png" {pkg_opt}2>/dev/null', ser)
 
-            if not launched:
-                res_file = run_adb(f'shell am start -a android.intent.action.VIEW -d "file:///sdcard/Pictures/inspector_screen.png" -t "image/png" {pkg_opt}2>/dev/null', ser)
-                if res_file and not any(err in res_file.lower() for err in ["error", "unable"]):
-                    launched = True
+            # Через 400 мс делаем одиночный тап в центр экрана: во всех мобильных галереях это скрывает тулбары и переводит в чистый 100% Fullscreen
+            time.sleep(0.4)
+            run_adb(f"shell input tap {scr_w // 2} {scr_h // 2} 2>/dev/null", ser)
 
-            # Запасной вариант для Samsung: аппаратное сервисное меню HwModuleTest
-            if not launched and "com.sec.android.app.hwmoduletest" in pkgs_installed:
-                hex_upper = hex_col.upper()
-                if hex_upper == "#000000":
-                    run_adb("shell am start -n com.sec.android.app.hwmoduletest/.BlackTest 2>/dev/null", ser)
-                elif hex_upper in ("#FF0000", "#F44336"):
-                    run_adb("shell am start -n com.sec.android.app.hwmoduletest/.RedTest 2>/dev/null", ser)
-                elif hex_upper in ("#00FF00", "#4CAF50"):
-                    run_adb("shell am start -n com.sec.android.app.hwmoduletest/.GreenTest 2>/dev/null", ser)
-                elif hex_upper in ("#0000FF", "#2196F3"):
-                    run_adb("shell am start -n com.sec.android.app.hwmoduletest/.BlueTest 2>/dev/null", ser)
-                elif hex_upper == "#FFFFFF":
-                    run_adb("shell am start -n com.sec.android.app.hwmoduletest/.ReceiverTest 2>/dev/null", ser)
-
-            self.after(0, lambda: self.set_status(f"✔ Экран залит цветом {hex_col} (100% яркость). Эталон открыт на ПК.", "#00e676"))
+            self.after(0, lambda: self.set_status(f"✔ Экран залит цветом {hex_col} (100% яркость, Fullscreen). Эталон открыт на ПК.", "#00e676"))
 
         threading.Thread(target=_worker, daemon=True).start()
 
